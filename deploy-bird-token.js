@@ -25,7 +25,7 @@ async function deployBirdToken() {
         console.log('✅ Issuer Spark wallet initialized');
         
         // Fund Issuer Wallet to fund token announcement on L1
-        const l1Address = wallet.getTokenL1Address();
+        const l1Address = await wallet.getTokenL1Address();
         console.log('📍 Fund this L1 address:', l1Address);
         
         // Check for latest deposit and claim it if available
@@ -46,7 +46,8 @@ async function deployBirdToken() {
         const tokenName = process.env.TOKEN_NAME || 'OrdiBird';
         const tokenTicker = process.env.TOKEN_TICKER || 'BIRD';
         const tokenDecimals = parseInt(process.env.TOKEN_DECIMALS) || 6;
-        const maxSupply = BigInt(process.env.TOKEN_MAX_SUPPLY || '1000000000000'); // 1 trillion default
+        const maxSupplyEnv = process.env.TOKEN_MAX_SUPPLY || '1000000000000';
+        const maxSupply = maxSupplyEnv === '0n' ? BigInt(0) : BigInt(maxSupplyEnv); // Handle 0n case
         const isFreezeable = process.env.TOKEN_IS_FREEZABLE === 'true';
         
         console.log('📢 Announcing token on L1...');
@@ -68,20 +69,43 @@ async function deployBirdToken() {
         // Mint tokens to the issuer wallet
         const mintAmount = BigInt(process.env.INITIAL_MINT_AMOUNT || '1');
         console.log(`🪙 Minting ${mintAmount} tokens to issuer wallet...`);
+        let balance = null;
         try {
             const transaction = await wallet.mintTokens(mintAmount);
             console.log('✅ Tokens minted successfully!');
             
             // Get and display balance
-            const balance = await wallet.getBalance();
+            balance = await wallet.getBalance();
             console.log('💰 Sat and token balance:', balance);
         } catch (error) {
             console.log('⚠️ Could not mint tokens (Spark network not fully connected):', error.message);
             console.log('📝 This is expected in development mode without full Spark network setup.');
+            
+            // Try to get balance anyway
+            try {
+                balance = await wallet.getBalance();
+                console.log('💰 Current balance:', balance);
+            } catch (balanceError) {
+                console.log('⚠️ Could not get balance:', balanceError.message);
+                balance = { satBalance: 0, tokenBalances: new Map() };
+            }
         }
         
         // Save token info to a file for the service to use
         const fs = require('fs');
+        
+        // Convert balance to serializable format
+        const serializableBalance = balance ? {
+            balance: balance.balance ? balance.balance.toString() : '0',
+            tokenBalances: balance.tokenBalances ? Array.from(balance.tokenBalances.entries()).map(([key, value]) => [
+                key,
+                {
+                    ...value,
+                    balance: value.balance ? value.balance.toString() : '0'
+                }
+            ]) : []
+        } : null;
+        
         const tokenInfo = {
             tokenName: tokenName,
             tokenTicker: tokenTicker,
@@ -90,7 +114,7 @@ async function deployBirdToken() {
             isFreezeable: isFreezeable,
             l1Address: l1Address,
             mintAmount: mintAmount.toString(),
-            balance: balance,
+            balance: serializableBalance,
             deployed: true,
             deploymentTime: new Date().toISOString(),
             network: process.env.SPARK_NETWORK || 'regtest'
@@ -134,4 +158,3 @@ if (require.main === module) {
 }
 
 module.exports = { deployBirdToken };
-

@@ -12,14 +12,12 @@ class TokenService {
         try {
             console.log('🔧 Initializing Spark wallet...');
             console.log('🌐 Network:', process.env.SPARK_NETWORK || 'mainnet');
-            console.log('🔗 RPC URL:', process.env.SPARK_RPC_URL || 'http://localhost:18443');
+            console.log('🔗 RPC URL:', process.env.SPARK_RPC_URL || 'https://spark-mainnet-rpc.buildonbitcoin.com');
             
             // Initialize Spark wallet
             const { wallet } = await SparkWallet.initialize({
                 network: process.env.SPARK_NETWORK || 'mainnet',
-                rpcUrl: process.env.SPARK_RPC_URL || 'http://localhost:18443',
-                rpcUser: process.env.SPARK_RPC_USER || 'user',
-                rpcPassword: process.env.SPARK_RPC_PASSWORD || 'password',
+                rpcUrl: process.env.SPARK_RPC_URL || 'https://spark-mainnet-rpc.buildonbitcoin.com',
                 mnemonicOrSeed: process.env.SPARK_MNEMONIC, // Mnemonic for the service wallet
             });
             

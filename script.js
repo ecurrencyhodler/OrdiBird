@@ -883,7 +883,7 @@ class OrdiBird {
 
         try {
             // Call backend API to claim token
-            const response = await fetch('http://localhost:3001/api/claim/token', {
+            const response = await fetch('/api/claim/token', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
