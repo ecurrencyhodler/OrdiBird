@@ -1,0 +1,379 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Orbitron', monospace;
+    background: linear-gradient(135deg, #0a0a0a 0%, #1d1d1d 50%, #0a0a0a 100%);
+    color: #0066cc;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+.game-container {
+    text-align: center;
+    max-width: 900px;
+    width: 100%;
+    padding: 20px;
+}
+
+.game-header {
+    margin-bottom: 20px;
+}
+
+.game-header h1 {
+    font-size: 3rem;
+    font-weight: 900;
+    margin-bottom: 10px;
+    color: #0066cc;
+}
+
+.subtitle {
+    font-size: 1.2rem;
+    color: #0066cc;
+    opacity: 0.8;
+}
+
+.game-area {
+    position: relative;
+    display: inline-block;
+    border: 3px solid #0066cc;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #87ceeb 0%, #2c5aa0 100%);
+    overflow: hidden;
+}
+
+#gameCanvas {
+    display: block;
+    background: linear-gradient(180deg, #87ceeb 0%, #2c5aa0 100%);
+}
+
+.game-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+}
+
+.overlay-content {
+    background: linear-gradient(135deg, #1d1d1d 0%, #0a0a0a 100%);
+    padding: 40px;
+    border-radius: 15px;
+    border: 2px solid #0066cc;
+    text-align: center;
+    max-width: 400px;
+}
+
+/* Success screen specific styling */
+#winScreen .overlay-content {
+    max-width: 600px;
+    width: 90%;
+}
+
+.overlay-content h2 {
+    font-size: 2rem;
+    margin-bottom: 20px;
+    color: #0066cc;
+}
+
+.overlay-content p {
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+    color: #ffffff;
+}
+
+.game-description {
+    color: #0066cc !important;
+}
+
+.overlay-content p:not(.game-description) {
+    color: #0066cc !important;
+}
+
+.start-btn {
+    background: linear-gradient(45deg, #0066cc, #0066cc);
+    color: #ffffff;
+    border: none;
+    padding: 15px 30px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Orbitron', monospace;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.start-btn:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(45deg, #0066cc, #0066cc);
+}
+
+.start-btn:active {
+    transform: translateY(0);
+}
+
+/* Token claim section */
+.token-claim-section {
+    margin-top: 20px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    border: 1px solid #ffffff;
+}
+
+.token-claim-section h3 {
+    font-size: 1.5rem;
+    margin-bottom: 15px;
+    color: #ffffff;
+    text-align: center;
+}
+
+.overlay-content .token-claim-section p {
+    font-size: 1rem;
+    margin-bottom: 20px;
+    color: #ffffff !important;
+    text-align: center;
+    line-height: 1.4;
+}
+
+.spark-input-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    align-items: center;
+}
+
+.spark-input {
+    width: 100%;
+    max-width: 400px;
+    padding: 12px 15px;
+    font-size: 1rem;
+    font-family: 'Orbitron', monospace;
+    border: 2px solid #ffffff;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.spark-input:focus {
+    border-color: #ffffff;
+}
+
+.spark-input::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.claim-btn {
+    background: linear-gradient(45deg, #0066cc, #004499);
+    color: #ffffff;
+    border: none;
+    padding: 12px 25px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Orbitron', monospace;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    min-width: 200px;
+}
+
+.claim-btn:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(45deg, #004499, #0066cc);
+}
+
+.claim-btn:active {
+    transform: translateY(0);
+}
+
+/* Game instructions section for start screen */
+.game-instructions-section {
+    margin-top: 20px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    border: 1px solid #ffffff;
+}
+
+.game-instructions-section p {
+    font-size: 1rem;
+    margin-bottom: 15px;
+    color: #ffffff !important;
+    text-align: center;
+    line-height: 1.4;
+}
+
+.game-instructions-section p:not(.game-description) {
+    color: #ffffff !important;
+}
+
+.game-instructions-section .start-btn {
+    margin-top: 10px;
+}
+
+.game-info {
+    margin-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.score-display {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #0066cc;
+}
+
+.instructions {
+    font-size: 1rem;
+    color: #0066cc;
+    opacity: 0.8;
+}
+
+/* Confetti animation */
+.confetti {
+    position: fixed;
+    top: -10px;
+    z-index: 1000;
+    user-select: none;
+    cursor: default;
+    animation: confetti-fall 3s linear infinite;
+}
+
+@keyframes confetti-fall {
+    0% {
+        transform: translateY(-10px) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+/* Responsive design */
+@media (max-width: 900px) {
+    .game-container {
+        padding: 10px;
+    }
+    
+    .game-header h1 {
+        font-size: 2rem;
+    }
+    
+    #gameCanvas {
+        width: 100%;
+        height: auto;
+        max-width: 800px;
+    }
+    
+    .game-info {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+
+@media (max-width: 600px) {
+    .game-header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .subtitle {
+        font-size: 1rem;
+    }
+    
+    /* Token claim section mobile adjustments */
+    .token-claim-section {
+        margin-top: 15px;
+        padding: 15px;
+    }
+    
+    .token-claim-section h3 {
+        font-size: 1.2rem;
+        margin-bottom: 10px;
+    }
+    
+    .overlay-content .token-claim-section p {
+        font-size: 0.9rem;
+        margin-bottom: 15px;
+        color: #ffffff !important;
+        line-height: 1.4;
+    }
+    
+    .spark-input-container {
+        gap: 12px;
+    }
+    
+    .spark-input {
+        padding: 10px 12px;
+        font-size: 0.9rem;
+        max-width: 100%;
+    }
+    
+    .claim-btn {
+        padding: 10px 20px;
+        font-size: 1rem;
+        min-width: 180px;
+        width: 100%;
+        max-width: 300px;
+    }
+    
+    /* Game instructions section mobile adjustments */
+    .game-instructions-section {
+        margin-top: 15px;
+        padding: 15px;
+    }
+    
+    .game-instructions-section p {
+        font-size: 0.9rem;
+        margin-bottom: 12px;
+    }
+    
+    .game-instructions-section .start-btn {
+        margin-top: 8px;
+        width: 100%;
+        max-width: 300px;
+    }
+    
+    .overlay-content {
+        padding: 20px;
+        margin: 10px;
+    }
+    
+    /* Success screen mobile adjustments */
+    #winScreen .overlay-content {
+        max-width: calc(100vw - 40px);
+        width: auto;
+        padding: 15px;
+        margin: 10px;
+    }
+    
+    .overlay-content h2 {
+        font-size: 1.5rem;
+    }
+    
+    .start-btn {
+        padding: 12px 24px;
+        font-size: 1rem;
+    }
+}
+

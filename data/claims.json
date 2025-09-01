@@ -1,0 +1,20 @@
+[
+  [
+    "sprt1pgss8x05jukczewst8kcdpssemrvj9dqashvvkzdl7ujr2wa4dlcklzrf0ksvl",
+    {
+      "address": "sprt1pgss8x05jukczewst8kcdpssemrvj9dqashvvkzdl7ujr2wa4dlcklzrf0ksvl",
+      "lastClaim": "2025-09-01T00:50:31.639Z",
+      "claimCount": 3,
+      "firstClaim": "2025-08-30T22:09:14.662Z"
+    }
+  ],
+  [
+    "sprt1pgss8wqdn2hz6ee6ff0xp3ewalmdty463ma6cfguxps3jhsth7ykn745wf5rmm",
+    {
+      "address": "sprt1pgss8wqdn2hz6ee6ff0xp3ewalmdty463ma6cfguxps3jhsth7ykn745wf5rmm",
+      "lastClaim": "2025-09-01T01:17:04.553Z",
+      "claimCount": 12,
+      "firstClaim": "2025-09-01T00:55:00.504Z"
+    }
+  ]
+]

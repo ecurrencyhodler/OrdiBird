@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OrdiBird - Bitcoin Flappy Game</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <h1>OrdiBird</h1>
+            <p class="subtitle">Flap your way to the Miner Mempool</p>
+        </div>
+        
+        <div class="game-area">
+            <canvas id="gameCanvas" width="800" height="600"></canvas>
+            
+            <div class="game-overlay" id="startScreen">
+                <div class="overlay-content">
+                    <h2>Welcome to OrdiBird!</h2>
+                    
+                    <div class="game-instructions-section">
+                        <p class="game-description">Help OrdiBird, the Bitcoin inscription, avoid the garbage men and knots!</p>
+                        <p>Press SPACE to flap</p>
+                        <button id="startButton" class="start-btn">Start Game</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="game-overlay" id="gameOverScreen" style="display: none;">
+                <div class="overlay-content">
+                    <h2>Game Over</h2>
+                    <p>Oh no! OrdiBird got filtered.</p>
+                    <p>Score: <span id="finalScore">0</span></p>
+                    <button id="restartButton" class="start-btn">Play Again</button>
+                </div>
+            </div>
+            
+            <div class="game-overlay" id="winScreen" style="display: none;">
+                <div class="overlay-content">
+                    <h2>🎉 Congratulations! 🎉</h2>
+                    <p>OrdiBird made it to the Miner Mempool!</p>
+                    <p>Score: <span id="winScore">0</span></p>
+                    
+                    <div class="token-claim-section">
+                        <h3>Claim Your Reward</h3>
+                        <p>Claim your reward by entering your Spark address.</p>
+                        
+                        <div class="spark-input-container">
+                            <input type="text" id="sparkAddress" placeholder="Enter your Spark address here" class="spark-input">
+                            <button id="claimTokenButton" class="claim-btn">Claim Reward</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="game-overlay" id="thanksScreen" style="display: none;">
+                <div class="overlay-content">
+                    <h2>🎉 Thanks for Playing! 🎉</h2>
+                    <p>Score: <span id="thanksScore">0</span></p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="game-info">
+            <div class="score-display">
+                <span>Score: <span id="currentScore">0</span></span>
+            </div>
+            <div class="instructions">
+                <p>Press SPACE to flap</p>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "tokenName": "OrdiBird",
+  "tokenTicker": "BIRD",
+  "tokenDecimals": 6,
+  "maxSupply": "0",
+  "isFreezable": true,
+  "tokenIdentifier": "btknrt127tjvrk39myktzq5e02mvfa7tsrw0xqwma020f8cpcfk4rnkt2dqpt2h26",
+  "tokenPublicKey": "029864642ecd8aaebec6227d311d2ab68444aa5151e8ab3b66c26dc7537585580e",
+  "createTokenTxId": "dcfb6305c3afeebdbaea14c3d66efa11ea9b98a778b670d19bd1cbcde5abdbe8",
+  "mintTxId": "0b0d6bb49af34652de8b46965569d00863715d11d1c9a94c056364f32eafc21c",
+  "initialBalance": "0",
+  "updatedBalance": "1000000",
+  "testMintAmount": "1000000",
+  "deployed": true,
+  "deploymentTime": "2025-09-01T00:44:16.320Z",
+  "network": "REGTEST"
+}
