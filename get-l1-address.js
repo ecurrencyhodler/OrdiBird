@@ -37,3 +37,4 @@ if (require.main === module) {
 }
 
 module.exports = { getL1Address };
+

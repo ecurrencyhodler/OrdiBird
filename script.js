@@ -119,12 +119,13 @@ class OrdiBird {
         // Start with very low gravity for floating effect
         this.bitcoin.gravity = 0.1;
         
-        this.startScreen.style.display = 'none';
-        this.gameOverScreen.style.display = 'none';
-        this.winScreen.style.display = 'none';
+        // Hide all overlays
+        this.startScreen.classList.remove('active');
+        this.gameOverScreen.classList.remove('active');
+        this.winScreen.classList.remove('active');
         const thanksScreen = document.getElementById('thanksScreen');
         if (thanksScreen) {
-            thanksScreen.style.display = 'none';
+            thanksScreen.classList.remove('active');
         }
         this.updateScore();
         
@@ -496,7 +497,7 @@ class OrdiBird {
             localStorage.setItem('ordiBirdHighScore', this.highScore);
         }
         
-        this.gameOverScreen.style.display = 'flex';
+        this.gameOverScreen.classList.add('active');
     }
     
     enterFlagMode() {
@@ -517,7 +518,7 @@ class OrdiBird {
             localStorage.setItem('ordiBirdHighScore', this.highScore);
         }
         
-        this.winScreen.style.display = 'flex';
+        this.winScreen.classList.add('active');
         this.createConfetti();
     }
     
@@ -920,7 +921,7 @@ class OrdiBird {
     
     showThanksForPlayingScreen() {
         // Hide the win screen
-        this.winScreen.style.display = 'none';
+        this.winScreen.classList.remove('active');
         
         // Set the score on the thanks screen
         this.thanksScoreElement.textContent = this.score;
@@ -928,7 +929,7 @@ class OrdiBird {
         // Show the thanks screen
         const thanksScreen = document.getElementById('thanksScreen');
         if (thanksScreen) {
-            thanksScreen.style.display = 'flex';
+            thanksScreen.classList.add('active');
         }
     }
     

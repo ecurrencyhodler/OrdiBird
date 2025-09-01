@@ -64,10 +64,18 @@ body {
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.8);
-    display: flex;
+    display: none;
     justify-content: center;
     align-items: center;
     z-index: 10;
+}
+
+.game-overlay.active {
+    display: flex;
+}
+
+#startScreen {
+    display: flex;
 }
 
 .overlay-content {
@@ -438,4 +446,3 @@ body {
         font-size: 1rem;
     }
 }
-
