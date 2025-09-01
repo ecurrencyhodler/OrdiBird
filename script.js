@@ -64,6 +64,7 @@ class OrdiBird {
         this.wingFlapSpeed = 0.3;
         
         this.setupEventListeners();
+        this.startScreen.classList.add('active'); // Make start screen visible initially
         this.drawStartScreen();
     }
     

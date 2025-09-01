@@ -74,10 +74,6 @@ body {
     display: flex;
 }
 
-#startScreen {
-    display: flex;
-}
-
 .overlay-content {
     background: linear-gradient(135deg, #1d1d1d 0%, #0a0a0a 100%);
     padding: 40px;
