@@ -15,7 +15,7 @@ const PORT = process.env.PORT || 3001;
 // Security middleware
 app.use(helmet());
 app.use(cors({
-    origin: ['http://localhost:8000', 'http://127.0.0.1:8000', 'http://localhost:54962', 'http://127.0.0.1:54962'],
+    origin: ['http://localhost:8000', 'http://127.0.0.1:8000', 'http://localhost:54962', 'http://127.0.0.1:54962', 'https://ordi-bird-85k80lvtn-ecurrencyhodlers-projects.vercel.app'],
     credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
@@ -39,10 +39,10 @@ const rateLimitService = new RateLimitService();
 // Validation schemas
 const claimTokenSchema = Joi.object({
     sparkAddress: Joi.string()
-        .pattern(/^(spark|sprt)[a-zA-Z0-9]{20,}$/)
+        .pattern(/^sp1[a-zA-Z0-9]{20,}$/)
         .required()
         .messages({
-            'string.pattern.base': 'Invalid Spark address format',
+            'string.pattern.base': 'Invalid Spark address format (should start with "sp1" and be at least 20 characters long)',
             'any.required': 'Spark address is required'
         })
 });

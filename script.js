@@ -876,10 +876,19 @@ class OrdiBird {
 
         // Basic validation for Spark address format (starts with 'sp1' and has reasonable length)
         const lowerAddress = sparkAddress.toLowerCase();
+        console.log('Validating address:', sparkAddress);
+        console.log('Address length:', sparkAddress.length);
+        console.log('Starts with sp1:', lowerAddress.startsWith('sp1'));
+        console.log('Length >= 20:', sparkAddress.length >= 20);
+        console.log('Raw address bytes:', Array.from(sparkAddress).map(c => c.charCodeAt(0)));
+        
         if (!lowerAddress.startsWith('sp1') || sparkAddress.length < 20) {
+            console.log('Validation failed!');
             alert('Please enter a valid Spark address (should start with "sp1" and be at least 20 characters long).');
             return;
         }
+        
+        console.log('Validation passed!');
 
         // Show loading state
         const claimButton = document.getElementById('claimTokenButton');
