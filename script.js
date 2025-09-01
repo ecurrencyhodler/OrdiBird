@@ -490,6 +490,7 @@ class OrdiBird {
     }
     
     gameOver() {
+        console.log('Game Over triggered! Score:', this.score);
         this.gameState = 'gameOver';
         this.finalScoreElement.textContent = this.score;
         
@@ -499,6 +500,7 @@ class OrdiBird {
         }
         
         this.gameOverScreen.classList.add('active');
+        console.log('Game Over screen should be visible now');
     }
     
     enterFlagMode() {
@@ -511,6 +513,7 @@ class OrdiBird {
     }
     
     gameWin() {
+        console.log('Game Win triggered! Score:', this.score);
         this.gameState = 'gameWin';
         this.winScoreElement.textContent = this.score;
         
@@ -520,6 +523,7 @@ class OrdiBird {
         }
         
         this.winScreen.classList.add('active');
+        console.log('Win screen should be visible now');
         this.createConfetti();
     }
     
@@ -921,6 +925,7 @@ class OrdiBird {
     }
     
     showThanksForPlayingScreen() {
+        console.log('Showing thanks for playing screen');
         // Hide the win screen
         this.winScreen.classList.remove('active');
         
@@ -931,15 +936,24 @@ class OrdiBird {
         const thanksScreen = document.getElementById('thanksScreen');
         if (thanksScreen) {
             thanksScreen.classList.add('active');
+            console.log('Thanks screen should be visible now');
+        } else {
+            console.error('Thanks screen element not found!');
         }
     }
     
     gameLoop() {
+        // Always continue the game loop to keep screens visible
         if (this.gameState === 'playing') {
             this.update();
             this.draw();
-            requestAnimationFrame(() => this.gameLoop());
+        } else if (this.gameState === 'gameOver' || this.gameState === 'gameWin') {
+            // Keep drawing the game state even when game is over/won
+            this.draw();
         }
+        
+        // Always continue the loop
+        requestAnimationFrame(() => this.gameLoop());
     }
 }
 
