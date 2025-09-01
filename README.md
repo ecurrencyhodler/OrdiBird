@@ -1,6 +1,6 @@
 # OrdiBird Token Game
 
-A fun browser-based game where players can earn BIRD tokens on the Bitcoin Spark network.
+A fun web-based game where players can earn BIRD tokens on the Bitcoin Spark network.
 
 ## 🚀 Quick Start
 

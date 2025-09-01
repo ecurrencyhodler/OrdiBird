@@ -868,10 +868,10 @@ class OrdiBird {
             return;
         }
 
-        // Basic validation for Spark address format (starts with 'spark' or 'sprt' and has reasonable length)
+        // Basic validation for Spark address format (starts with 'sp1' and has reasonable length)
         const lowerAddress = sparkAddress.toLowerCase();
-        if ((!lowerAddress.startsWith('spark') && !lowerAddress.startsWith('sprt')) || sparkAddress.length < 20) {
-            alert('Please enter a valid Spark address (should start with "spark" or "sprt").');
+        if (!lowerAddress.startsWith('sp1') || sparkAddress.length < 20) {
+            alert('Please enter a valid Spark address (should start with "sp1").');
             return;
         }
 

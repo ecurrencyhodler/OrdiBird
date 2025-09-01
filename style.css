@@ -26,6 +26,8 @@ body {
     margin-bottom: 20px;
 }
 
+
+
 .game-header h1 {
     font-size: 3rem;
     font-weight: 900;
@@ -38,6 +40,8 @@ body {
     color: #0066cc;
     opacity: 0.8;
 }
+
+
 
 .game-area {
     position: relative;
@@ -149,6 +153,38 @@ body {
     line-height: 1.4;
 }
 
+.spark-address-help {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: rgba(0, 102, 204, 0.1);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 102, 204, 0.3);
+}
+
+.spark-address-help p {
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+    color: #ffffff !important;
+    text-align: center;
+    line-height: 1.4;
+}
+
+.spark-address-help p:last-child {
+    margin-bottom: 0;
+}
+
+.xverse-link {
+    color: #0066cc;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.xverse-link:hover {
+    color: #ffffff;
+    text-decoration: underline;
+}
+
 .spark-input-container {
     display: flex;
     flex-direction: column;
@@ -235,6 +271,32 @@ body {
     align-items: center;
     flex-wrap: wrap;
     gap: 20px;
+}
+
+.github-link {
+    display: flex;
+    align-items: center;
+}
+
+.github-link a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #0066cc;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    padding: 8px;
+    border-radius: 50%;
+}
+
+.github-link a:hover {
+    background: rgba(0, 102, 204, 0.1);
+    transform: scale(1.1);
+}
+
+.github-link svg {
+    width: 24px;
+    height: 24px;
 }
 
 .score-display {
