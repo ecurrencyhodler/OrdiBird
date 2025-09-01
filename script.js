@@ -877,7 +877,7 @@ class OrdiBird {
         // Basic validation for Spark address format (starts with 'sp1' and has reasonable length)
         const lowerAddress = sparkAddress.toLowerCase();
         if (!lowerAddress.startsWith('sp1') || sparkAddress.length < 20) {
-            alert('Please enter a valid Spark address (should start with "sp1").');
+            alert('Please enter a valid Spark address (should start with "sp1" and be at least 20 characters long).');
             return;
         }
 
