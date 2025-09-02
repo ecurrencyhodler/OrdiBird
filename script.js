@@ -28,8 +28,8 @@ class OrdiBird {
             width: 40,
             height: 40,
             velocity: 0,
-            gravity: 0.225,
-            jumpPower: -6,
+            gravity: 1, // Balanced gravity for good control
+            jumpPower: -10, // Balanced jump height for good control
             rotation: 0
         };
         
@@ -38,16 +38,16 @@ class OrdiBird {
         this.ropes = []; // Separate array for ropes
         this.garbageCanWidth = 80;
         this.garbageCanGap = 300; // Increased gap for more room
-        this.garbageCanSpeed = 3;
-        this.garbageCanSpawnRate = 150; // frames between spawns
-        this.ropeSpawnRate = 150; // Doubled spawn rate (was 300) // 50% of garbage can spawn rate (150 * 2)
+        this.garbageCanSpeed = 15; // Increased by 25% from 12 for even faster 30 FPS
+        this.garbageCanSpawnRate = 33; // Increased by 50% from 50 for even faster spawning
+        this.ropeSpawnRate = 33; // Increased by 50% from 50 for even faster spawning
         this.frameCount = 0;
         this.flagMode = false;
         
         // Garbage man character
         this.garbageMan = null;
-        this.garbageManSpawnRate = 180; // frames between garbage man spawns (3 seconds at 60fps)
-        this.garbageManSpeed = 4.5; // Reduced by 50% from 9 to 4.5
+        this.garbageManSpawnRate = 90; // frames between garbage man spawns (1.5 seconds at 30fps)
+        this.garbageManSpeed = 18; // Good speed - clearly visible movement
         
         // Load garbage man image
         this.garbageManImage = new Image();
@@ -55,9 +55,9 @@ class OrdiBird {
         
         // Difficulty progression
         this.difficultyLevel = 1;
-        this.baseSpeed = 3;
-        this.speedIncrease = 0.1;
-        this.maxSpeed = 8;
+        this.baseSpeed = 15; // Increased by 25% from 12 for even faster 30 FPS
+        this.speedIncrease = 0.5; // Increased by 25% from 0.4 for even faster 30 FPS
+        this.maxSpeed = 40; // Increased by 25% from 32 for even faster 30 FPS
         
         // Animation
         this.wingFlap = 0;
@@ -65,6 +65,7 @@ class OrdiBird {
         
         // Game loop control
         this.gameLoopRunning = false;
+        this.gameLoopInterval = null;
         
         this.setupEventListeners();
         this.startScreen.classList.add('active'); // Make start screen visible initially
@@ -115,17 +116,17 @@ class OrdiBird {
         this.difficultyLevel = 1;
         
         // Explicitly reset ALL speed and timing variables to original values
-        this.garbageCanSpeed = 3; // Original speed
-        this.garbageCanSpawnRate = 150; // Original spawn rate
-        this.ropeSpawnRate = 150; // Original rope spawn rate
-        this.garbageManSpeed = 4.5; // Original garbage man speed
-        this.garbageManSpawnRate = 180; // Original garbage man spawn rate
+        this.garbageCanSpeed = 15; // Increased by 25% for even faster 30 FPS
+        this.garbageCanSpawnRate = 33; // 50% faster spawning
+        this.ropeSpawnRate = 33; // 50% faster spawning
+        this.garbageManSpeed = 18; // Good speed - clearly visible movement
+        this.garbageManSpawnRate = 90; // Original garbage man spawn rate (30 FPS)
         
         this.flagMode = false;
         this.garbageMan = null;
         
-        // Reset gravity to original value
-        this.bitcoin.gravity = 0.225;
+        // Reset gravity to balanced value for good control
+        this.bitcoin.gravity = 1;
         
         // Hide all overlays
         this.startScreen.classList.remove('active');
@@ -140,7 +141,8 @@ class OrdiBird {
         // Only start game loop if it's not already running
         if (!this.gameLoopRunning) {
             this.gameLoopRunning = true;
-            this.gameLoop();
+            // Use setInterval for consistent 30 FPS across all devices
+            this.gameLoopInterval = setInterval(() => this.gameLoop(), 1000 / 30); // 30 FPS
         }
     }
     
@@ -158,7 +160,11 @@ class OrdiBird {
         
         // Check for win condition in flag mode
         if (this.flagMode && this.bitcoin.x >= this.canvasWidth - 120) {
-            // Don't add extra points, just win at current score
+            // Award the 50th point when reaching the flag
+            if (this.score === 49) {
+                this.score = 50;
+                this.updateScore();
+            }
             this.gameWin();
             return;
         }
@@ -169,7 +175,7 @@ class OrdiBird {
         
         // Move bird horizontally in flag mode
         if (this.flagMode) {
-            this.bitcoin.x += 2; // Move bird towards the flag
+            this.bitcoin.x += 10; // Increased by 25% from 8 for even faster 30 FPS
         }
         
         this.bitcoin.rotation = Math.min(Math.PI / 2, Math.max(-Math.PI / 2, this.bitcoin.velocity * 0.1));
@@ -255,19 +261,51 @@ class OrdiBird {
             return;
         }
         
-        // Generate hill height based on difficulty level (including level 1)
+        // Check if we should enforce the proper gap distance for this level
+        let enforceGap = false;
+        if (this.difficultyLevel >= 2) {
+            if (this.difficultyLevel === 4) {
+                // Level 4: 60% chance to enforce 60px gaps for guaranteed challenge
+                // Also guarantee the first obstacle in Level 4 uses the proper gap
+                enforceGap = Math.random() < 0.6 || this.garbageCans.length === 0;
+            } else {
+                // Levels 2-3: 30% chance to enforce proper gap distance
+                enforceGap = Math.random() < 0.3;
+            }
+        }
+        
+        // Calculate spawn position
+        let spawnX = this.canvasWidth;
+        
+        // If enforcing gap and we have previous obstacles, ensure proper spacing
+        if (enforceGap && this.garbageCans.length > 0) {
+            const lastCan = this.garbageCans[this.garbageCans.length - 1];
+            const targetGap = this.garbageCanGap;
+            
+            // Calculate where the new obstacle should be for proper gap
+            const idealSpawnX = lastCan.x + targetGap;
+            
+            // Only use the gap positioning if it would spawn off-screen to the right
+            // Otherwise, spawn normally at the right edge
+            if (idealSpawnX >= this.canvasWidth) {
+                spawnX = idealSpawnX;
+            }
+            // If idealSpawnX would be on-screen, keep spawnX as canvasWidth (normal spawning)
+        }
+        
+        // Generate hill height based on difficulty level with increased variability
         let hillHeight = 0;
         if (this.difficultyLevel >= 1) {
-            hillHeight = Math.random() * 80 + 10; // 10-90px hill height for level 1 (increased variation)
+            hillHeight = Math.random() * 120 + 5; // 5-125px hill height for level 1 (much more variation)
         }
         if (this.difficultyLevel >= 2) {
-            hillHeight = Math.random() * 60 + 20; // 20-80px hill height for levels 2+
+            hillHeight = Math.random() * 100 + 15; // 15-115px hill height for levels 2+ (more dynamic)
         }
         if (this.difficultyLevel >= 3) {
-            hillHeight = Math.random() * 100 + 40; // 40-140px hill height for levels 3+
+            hillHeight = Math.random() * 140 + 25; // 25-165px hill height for levels 3+ (high variation)
         }
         if (this.difficultyLevel >= 4) {
-            hillHeight = Math.random() * 140 + 60; // 60-200px hill height for level 4
+            hillHeight = Math.random() * 180 + 40; // 40-220px hill height for level 4 (maximum variation)
         }
         
         // Ensure there's always enough space for Ordi to fly through
@@ -278,7 +316,7 @@ class OrdiBird {
         const gapPosition = Math.random() * (maxGapPosition - minGapPosition) + minGapPosition;
         
         this.garbageCans.push({
-            x: this.canvasWidth,
+            x: spawnX,
             gapY: gapPosition,
             gapHeight: this.garbageCanGap,
             hillHeight: hillHeight,
@@ -292,13 +330,30 @@ class OrdiBird {
             return;
         }
         
-        // Spawn rope at random position, but ensure it doesn't block the gap
+        // Spawn rope with increased variability in position and length
         const ropeX = this.canvasWidth;
-        const ropeY = Math.random() * 150 + 50; // Position in top 200px only
+        
+        // More variable rope positioning based on difficulty level
+        let ropeY;
+        if (this.difficultyLevel === 1) {
+            ropeY = Math.random() * 200 + 30; // 30-230px for level 1 (wider range)
+        } else if (this.difficultyLevel === 2) {
+            ropeY = Math.random() * 180 + 40; // 40-220px for level 2 (more variation)
+        } else if (this.difficultyLevel === 3) {
+            ropeY = Math.random() * 160 + 50; // 50-210px for level 3 (high variation)
+        } else {
+            ropeY = Math.random() * 140 + 60; // 60-200px for level 4 (maximum variation)
+        }
+        
+        // Add random length variation to make ropes more interesting
+        const baseLength = Math.random() * 80 + 40; // 40-120px base length
+        const lengthMultiplier = 0.8 + Math.random() * 0.6; // 0.8x to 1.4x variation
+        const customLength = Math.floor(baseLength * lengthMultiplier);
         
         this.ropes.push({
             x: ropeX,
             y: ropeY,
+            customLength: customLength, // Store custom length for drawing
             passed: false
         });
     }
@@ -312,9 +367,9 @@ class OrdiBird {
         
         // Update existing garbage man
         if (this.garbageMan) {
-            this.garbageMan.x -= this.garbageManSpeed;
+            this.garbageMan.x -= this.garbageManSpeed; // Move left (toward player)
             
-            // Remove if off screen
+            // Remove if off screen to the left
             if (this.garbageMan.x + 40 < 0) {
                 this.garbageMan = null;
             }
@@ -332,9 +387,9 @@ class OrdiBird {
         const walkY = this.canvasHeight - 120; // Position so feet are at bottom
         
         this.garbageMan = {
-            x: this.canvasWidth + 50, // Start slightly off screen to the right
+            x: this.canvasWidth + 50, // Start off screen to the right
             y: walkY,
-            direction: -1, // Walking left
+            direction: -1, // Walking left (toward player)
             animationFrame: 0
         };
     }
@@ -412,7 +467,14 @@ class OrdiBird {
                 // Calculate rope position and dimensions
                 const ropeX = rope.x + this.garbageCanWidth / 2 - 4; // 8px wide rope
                 const ropeWidth = 8;
-                const ropeHeight = Math.min(rope.y - 50, 150); // Rope extends from top to max 150px
+                
+                // Use custom length if available, otherwise fall back to original calculation
+                let ropeHeight;
+                if (rope.customLength) {
+                    ropeHeight = rope.customLength; // Use the custom length we set
+                } else {
+                    ropeHeight = Math.min(rope.y - 50, 150); // Fallback to original calculation
+                }
                 
                 // Check if Bitcoin hits the rope (more precise collision)
                 if (this.bitcoin.x < ropeX + ropeWidth &&
@@ -466,29 +528,37 @@ class OrdiBird {
         // Calculate current difficulty level based on score
         const newDifficultyLevel = Math.min(4, Math.floor(this.score / 10) + 1);
         
+        // Extend Level 4 to 49 points for more challenge
+        if (this.score >= 40 && this.score < 50) {
+            this.difficultyLevel = 4;
+        }
+        
         // Only update if difficulty level changed
         if (newDifficultyLevel !== this.difficultyLevel) {
             this.difficultyLevel = newDifficultyLevel;
             this.garbageCanSpeed = Math.min(this.maxSpeed, this.baseSpeed + (this.difficultyLevel - 1) * this.speedIncrease);
             
-            // Spawn rate progression for 4 levels
+            // Spawn rate progression for 4 levels (3x faster than before)
             if (this.difficultyLevel === 1) {
-                this.garbageCanSpawnRate = 150; // Level 1
-                this.ropeSpawnRate = 300; // Level 1 - no ropes (high number means rare spawning)
+                this.garbageCanSpawnRate = 33; // Level 1 - 50% faster
+                this.ropeSpawnRate = 67; // Level 1 - 50% faster
             } else if (this.difficultyLevel === 2) {
-                this.garbageCanSpawnRate = 90; // Level 2 - 90 frames spawn rate
-                this.ropeSpawnRate = 120; // Level 2 - 120 frames spawn rate
+                this.garbageCanSpawnRate = 20; // Level 2 - 50% faster
+                this.ropeSpawnRate = 27; // Level 2 - 50% faster
+                this.garbageCanGap = 120; // Level 2 - very tight gaps for high challenge
             } else if (this.difficultyLevel === 3) {
-                this.garbageCanSpawnRate = 60; // Level 3 - reduced by 50%
-                this.ropeSpawnRate = 100; // Level 3 - 100 frames spawn rate
+                this.garbageCanSpawnRate = 13; // Level 3 - 50% faster
+                this.ropeSpawnRate = 22; // Level 3 - 50% faster
+                this.garbageCanGap = 120; // Level 3 - very tight gaps for high challenge
             } else if (this.difficultyLevel === 4) {
-                this.garbageCanSpawnRate = 44; // Level 4 - reduced by 50%
-                this.ropeSpawnRate = 80; // Level 4 - 80 frames spawn rate
+                this.garbageCanSpawnRate = 10; // Level 4 - 50% faster
+                this.ropeSpawnRate = 18; // Level 4 - 50% faster
+                this.garbageCanGap = 60; // Level 4 - ultimate challenge with extremely tight gaps
             }
         }
         
-        // Check for flag mode at 40 points
-        if (this.score >= 40 && this.gameState === 'playing' && !this.flagMode) {
+        // Check for flag mode at 49 points
+        if (this.score >= 49 && this.gameState === 'playing' && !this.flagMode) {
             this.enterFlagMode();
         }
     }
@@ -505,6 +575,9 @@ class OrdiBird {
         
         this.gameOverScreen.classList.add('active');
         console.log('Game Over screen should be visible now');
+        
+        // Stop the game loop interval
+        this.stopGameLoop();
     }
     
     enterFlagMode() {
@@ -529,6 +602,9 @@ class OrdiBird {
         this.winScreen.classList.add('active');
         console.log('Win screen should be visible now');
         this.createConfetti();
+        
+        // Stop the game loop interval
+        this.stopGameLoop();
     }
     
     createConfetti() {
@@ -643,7 +719,7 @@ class OrdiBird {
         
         // Draw ropes separately
         for (const rope of this.ropes) {
-            this.drawRopeWithKnot(rope.x, rope.y);
+                            this.drawRopeWithKnot(rope.x, rope.y, rope.customLength);
         }
     }
     
@@ -753,19 +829,26 @@ class OrdiBird {
         }
     }
     
-    drawRopeWithKnot(x, ropeY) {
+    drawRopeWithKnot(x, ropeY, customLength = null) {
         const ropeWidth = 8;
-        const ropeHeight = ropeY - 50; // Leave 50px from top
         
-        // Ensure rope doesn't extend too far down
-        const maxRopeHeight = Math.min(ropeHeight, 150); // Max 150px rope height
+        // Use custom length if provided, otherwise calculate from ropeY
+        let ropeHeight;
+        if (customLength) {
+            ropeHeight = customLength; // Use the custom length directly
+        } else {
+            ropeHeight = ropeY - 50; // Fallback to original calculation
+        }
+        
+        // Ensure rope doesn't extend too far down and has a minimum height
+        const maxRopeHeight = Math.max(Math.min(ropeHeight, 200), 60); // Min 60px, Max 200px rope height
         
         // Draw rope
         this.ctx.fillStyle = '#8B4513'; // Brown rope
         this.ctx.fillRect(x + this.garbageCanWidth / 2 - ropeWidth / 2, 0, ropeWidth, maxRopeHeight);
         
-        // Draw knot (thicker section)
-        const knotY = ropeHeight - 30;
+        // Draw knot (thicker section) - positioned relative to the actual visible rope
+        const knotY = maxRopeHeight - 30;
         const knotWidth = 16;
         const knotHeight = 20;
         
@@ -955,6 +1038,14 @@ class OrdiBird {
         }
     }
     
+    stopGameLoop() {
+        if (this.gameLoopInterval) {
+            clearInterval(this.gameLoopInterval);
+            this.gameLoopInterval = null;
+            this.gameLoopRunning = false;
+        }
+    }
+    
     gameLoop() {
         // Always continue the game loop to keep screens visible
         if (this.gameState === 'playing') {
@@ -965,8 +1056,8 @@ class OrdiBird {
             this.draw();
         }
         
-        // Always continue the loop
-        requestAnimationFrame(() => this.gameLoop());
+        // Continue the loop at 30 FPS using setInterval instead of requestAnimationFrame
+        // This ensures consistent timing across all devices (web and mobile)
     }
 }
 
