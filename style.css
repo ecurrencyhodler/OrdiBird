@@ -367,78 +367,201 @@ body {
         font-size: 1rem;
     }
     
-    /* Token claim section mobile adjustments */
-    .token-claim-section {
-        margin-top: 15px;
+    /* Mobile-friendly pop-up adjustments */
+    .overlay-content {
         padding: 15px;
+        margin: 10px;
+        max-width: calc(100vw - 40px);
+        width: auto;
     }
     
-    .token-claim-section h3 {
-        font-size: 1.2rem;
+    .overlay-content h2 {
+        font-size: 1.3rem;
         margin-bottom: 10px;
     }
     
-    .overlay-content .token-claim-section p {
+    .overlay-content p {
+        font-size: 0.85rem;
+        margin-bottom: 8px;
+        line-height: 1.2;
+    }
+    
+    /* Success screen mobile adjustments */
+    #winScreen .overlay-content {
+        max-width: calc(100vw - 10px);
+        width: auto;
+        padding: 12px 10px;
+        margin: 2px;
+        max-height: calc(100vh - 10px);
+        overflow-y: auto;
+        /* Ensure proper mobile scrolling */
+        -webkit-overflow-scrolling: touch;
+        /* Prevent horizontal overflow */
+        overflow-x: hidden;
+        /* Ensure mobile visibility */
+        display: block !important;
+        visibility: visible !important;
+    }
+    
+    /* Token claim section mobile adjustments */
+    .token-claim-section {
+        margin-top: 8px;
+        padding: 8px 6px;
+        width: 100%;
+    }
+    
+    .token-claim-section h3 {
         font-size: 0.9rem;
-        margin-bottom: 15px;
+        margin-bottom: 6px;
+    }
+    
+    .overlay-content .token-claim-section p {
+        font-size: 0.75rem;
+        margin-bottom: 8px;
         color: #ffffff !important;
-        line-height: 1.4;
+        line-height: 1.2;
     }
     
     .spark-input-container {
-        gap: 12px;
+        gap: 6px;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
     }
     
     .spark-input {
-        padding: 10px 12px;
-        font-size: 0.9rem;
+        padding: 8px 10px;
+        font-size: 0.8rem;
+        width: 100%;
         max-width: 100%;
+        box-sizing: border-box;
     }
     
     .claim-btn {
-        padding: 10px 20px;
-        font-size: 1rem;
-        min-width: 180px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        min-width: 140px;
         width: 100%;
-        max-width: 300px;
+        max-width: 100%;
+        margin-top: 6px;
+        box-sizing: border-box;
+        position: relative;
+        z-index: 5;
+        /* Ensure button is always visible on mobile */
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    
+    /* Additional mobile optimizations for very small screens */
+    @media (max-width: 480px) {
+        #winScreen .overlay-content {
+            padding: 8px 6px;
+            margin: 1px;
+            max-width: calc(100vw - 6px);
+            max-height: calc(100vh - 8px);
+        }
+        
+        .token-claim-section {
+            padding: 6px 4px;
+            margin-top: 6px;
+        }
+        
+        .claim-btn {
+            padding: 10px 14px;
+            font-size: 0.8rem;
+            min-width: 120px;
+        }
+        
+        .spark-input {
+            padding: 10px 8px;
+            font-size: 0.8rem;
+        }
+        
+        /* Reduce margins and spacing for very small screens */
+        .overlay-content h2 {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+        
+        .overlay-content p {
+            font-size: 0.75rem;
+            margin-bottom: 6px;
+        }
+    }
+    
+    /* Ensure proper mobile layout and button visibility */
+    @media (max-width: 600px) {
+        .spark-input-container {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 100% !important;
+            margin: 0 auto !important;
+        }
+        
+        #claimTokenButton {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            position: relative !important;
+            z-index: 10 !important;
+            margin: 15px auto 0 auto !important;
+            /* Force button to be visible and properly sized */
+            height: auto !important;
+            min-height: 44px !important; /* iOS minimum touch target */
+            line-height: 1.2 !important;
+        }
+        
+        /* Ensure the token claim section is fully visible */
+        .token-claim-section {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            position: relative !important;
+            z-index: 5 !important;
+        }
+        
+        /* Fix any potential overflow issues */
+        #winScreen {
+            /* Ensure win screen is always visible when active */
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        
+        #winScreen .overlay-content {
+            overflow-y: auto !important;
+            /* Ensure proper mobile scrolling */
+            -webkit-overflow-scrolling: touch !important;
+            /* Prevent horizontal overflow */
+            overflow-x: hidden !important;
+            /* Better mobile sizing */
+            max-height: calc(100vh - 20px) !important;
+            max-width: calc(100vw - 20px) !important;
+        }
     }
     
     /* Game instructions section mobile adjustments */
     .game-instructions-section {
-        margin-top: 15px;
-        padding: 15px;
+        margin-top: 12px;
+        padding: 12px;
     }
     
     .game-instructions-section p {
-        font-size: 0.9rem;
-        margin-bottom: 12px;
+        font-size: 0.85rem;
+        margin-bottom: 10px;
     }
     
     .game-instructions-section .start-btn {
         margin-top: 8px;
         width: 100%;
-        max-width: 300px;
-    }
-    
-    .overlay-content {
-        padding: 20px;
-        margin: 10px;
-    }
-    
-    /* Success screen mobile adjustments */
-    #winScreen .overlay-content {
-        max-width: calc(100vw - 40px);
-        width: auto;
-        padding: 15px;
-        margin: 10px;
-    }
-    
-    .overlay-content h2 {
-        font-size: 1.5rem;
+        max-width: 280px;
     }
     
     .start-btn {
-        padding: 12px 24px;
-        font-size: 1rem;
+        padding: 10px 20px;
+        font-size: 0.9rem;
     }
 }

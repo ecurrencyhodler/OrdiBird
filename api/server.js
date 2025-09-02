@@ -6,8 +6,8 @@ const Joi = require('joi');
 require('dotenv').config();
 
 const { SparkWallet } = require('@buildonspark/spark-sdk');
-const TokenService = require('./services/TokenService');
-const RateLimitService = require('./services/RateLimitService');
+const TokenService = require('../services/TokenService');
+const RateLimitService = require('../services/RateLimitService');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
