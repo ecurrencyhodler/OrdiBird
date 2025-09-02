@@ -63,6 +63,9 @@ class OrdiBird {
         this.wingFlap = 0;
         this.wingFlapSpeed = 0.3;
         
+        // Game loop control
+        this.gameLoopRunning = false;
+        
         this.setupEventListeners();
         this.startScreen.classList.add('active'); // Make start screen visible initially
         this.drawStartScreen();
@@ -104,21 +107,25 @@ class OrdiBird {
         this.score = 0;
         this.bitcoin.x = 150; // Reset bird position
         this.bitcoin.y = this.canvasHeight / 2;
-        this.bitcoin.velocity = -2; // Start with a small upward velocity
+        this.bitcoin.velocity = 0; // Start with zero velocity (same as constructor)
         this.bitcoin.rotation = 0;
         this.garbageCans = [];
         this.ropes = [];
         this.frameCount = 0;
         this.difficultyLevel = 1;
-        this.garbageCanSpeed = this.baseSpeed;
-        this.garbageCanSpawnRate = 150; // Reset spawn rate to level 1
-        this.ropeSpawnRate = 120; // Reset rope spawn rate (25% more ropes)
+        
+        // Explicitly reset ALL speed and timing variables to original values
+        this.garbageCanSpeed = 3; // Original speed
+        this.garbageCanSpawnRate = 150; // Original spawn rate
+        this.ropeSpawnRate = 150; // Original rope spawn rate
+        this.garbageManSpeed = 4.5; // Original garbage man speed
+        this.garbageManSpawnRate = 180; // Original garbage man spawn rate
+        
         this.flagMode = false;
         this.garbageMan = null;
-        this.garbageManSpawnRate = 180; // Reset garbage man spawn rate (3 seconds)
         
-        // Start with very low gravity for floating effect
-        this.bitcoin.gravity = 0.1;
+        // Reset gravity to original value
+        this.bitcoin.gravity = 0.225;
         
         // Hide all overlays
         this.startScreen.classList.remove('active');
@@ -130,7 +137,11 @@ class OrdiBird {
         }
         this.updateScore();
         
-        this.gameLoop();
+        // Only start game loop if it's not already running
+        if (!this.gameLoopRunning) {
+            this.gameLoopRunning = true;
+            this.gameLoop();
+        }
     }
     
     restartGame() {
@@ -152,14 +163,7 @@ class OrdiBird {
             return;
         }
         
-        // Gradually increase gravity from floating to normal
-        if (this.frameCount < 60) { // First 60 frames (1 second at 60fps)
-            this.bitcoin.gravity = 0.1 + (this.frameCount / 60) * 0.125; // Gradually increase to 0.225
-        } else {
-            this.bitcoin.gravity = 0.225; // Normal gravity
-        }
-        
-        // Update Bitcoin
+        // Update Bitcoin with consistent gravity
         this.bitcoin.velocity += this.bitcoin.gravity;
         this.bitcoin.y += this.bitcoin.velocity;
         
@@ -470,7 +474,7 @@ class OrdiBird {
             // Spawn rate progression for 4 levels
             if (this.difficultyLevel === 1) {
                 this.garbageCanSpawnRate = 150; // Level 1
-                this.ropeSpawnRate = 120; // Level 1 - no ropes
+                this.ropeSpawnRate = 300; // Level 1 - no ropes (high number means rare spawning)
             } else if (this.difficultyLevel === 2) {
                 this.garbageCanSpawnRate = 90; // Level 2 - 90 frames spawn rate
                 this.ropeSpawnRate = 120; // Level 2 - 120 frames spawn rate
