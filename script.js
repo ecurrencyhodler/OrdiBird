@@ -420,8 +420,8 @@ class OrdiBird {
     
     spawnGarbageMan() {
         // Always spawn at the same height along the bottom of the screen
-        // Image is 120px tall, so position it so feet are at bottom of screen
-        const walkY = this.canvasHeight - 120; // Position so feet are at bottom
+        // Image is 180px tall, so position it so feet are at bottom of screen
+        const walkY = this.canvasHeight - 180; // Position so feet are at bottom
         
         this.garbageMan = {
             x: this.canvasWidth + 50, // Start off screen to the right
@@ -479,8 +479,10 @@ class OrdiBird {
         if (this.garbageMan) {
             const manX = this.garbageMan.x;
             const manY = this.garbageMan.y;
-            const manWidth = 40;
-            const manHeight = 60;
+            // Calculate width based on natural aspect ratio
+            const manWidth = this.garbageManImage.complete ? 
+                (this.garbageManImage.naturalWidth / this.garbageManImage.naturalHeight) * 180 : 120;
+            const manHeight = 180;
             
             // More precise collision detection for the garbage man
             if (this.bitcoin.x < manX + manWidth &&
@@ -785,18 +787,22 @@ class OrdiBird {
         this.ctx.fillRect(x + 5, y + 10, 8, height - 20);
         this.ctx.fillRect(x + this.garbageCanWidth - 13, y + 10, 8, height - 20);
         
-        // Hinged lid (partially open) - facing opposite direction
+        // Center seam line down the middle
+        this.ctx.fillStyle = '#404040';
+        this.ctx.fillRect(x + this.garbageCanWidth / 2 - 2, y + 10, 4, height - 20);
+        
+        // Hinged lid (partially open) - facing left
         this.ctx.fillStyle = '#808080';
         this.ctx.save();
         this.ctx.translate(x + this.garbageCanWidth / 2, y);
-        this.ctx.rotate(Math.PI / 4); // 45 degree angle in opposite direction
+        this.ctx.rotate(Math.PI / 4); // 45 degree angle facing left
         this.ctx.fillRect(-this.garbageCanWidth / 2 - 2, -8, this.garbageCanWidth + 4, 12);
         this.ctx.restore();
         
-        // Lid handle
+        // Lid handle - positioned on top of the lid
         this.ctx.fillStyle = '#5a5a5a';
-        this.ctx.fillRect(x + 15, y - 10, 20, 6);
-        this.ctx.fillRect(x + 20, y - 15, 10, 8);
+        this.ctx.fillRect(x + this.garbageCanWidth / 2 - 10, y - 15, 20, 6);
+        this.ctx.fillRect(x + this.garbageCanWidth / 2 - 5, y - 20, 10, 8);
         
         // Wheels at the bottom
         this.ctx.fillStyle = '#808080';
@@ -922,8 +928,10 @@ class OrdiBird {
         // Draw the garbage man image
         if (this.garbageManImage.complete) {
             // Image is loaded, draw it
-            const imageWidth = 80; // Adjust size as needed
-            const imageHeight = 120; // Adjust size as needed
+            // Use natural aspect ratio to avoid distortion
+            const baseHeight = 180; // Back to original size
+            const imageWidth = (this.garbageManImage.naturalWidth / this.garbageManImage.naturalHeight) * baseHeight;
+            const imageHeight = baseHeight;
             
             // Add walking animation by slightly moving the image up and down
             const walkBounce = Math.sin(this.garbageMan.animationFrame * 2) * 2;
