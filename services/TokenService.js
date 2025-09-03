@@ -1,5 +1,6 @@
 const { IssuerSparkWallet } = require('@buildonspark/issuer-sdk');
 const fs = require('fs');
+const balanceCacheService = require('./BalanceCacheService');
 
 class TokenService {
     constructor() {
@@ -38,22 +39,44 @@ class TokenService {
 
     async loadTokenInfo() {
         try {
-            // Load token info from the deployment file
+            // Load token info from the deployment file if it exists
             if (fs.existsSync('bird-token-info.json')) {
                 const tokenData = JSON.parse(fs.readFileSync('bird-token-info.json', 'utf8'));
                 this.tokenInfo = tokenData;
-                
-                // Try to get the actual token ID from the wallet's balance
-                const balance = await this.issuerWallet.getBalance();
-                if (balance && balance.tokenBalances && balance.tokenBalances.size > 0) {
-                    // Get the first (and should be only) token ID from the balance
-                    this.tokenId = Array.from(balance.tokenBalances.keys())[0];
-                    console.log('✅ Token ID loaded from wallet balance:', this.tokenId);
-                } else {
-                    console.log('⚠️ No token balance found, token may not be properly deployed');
-                }
+                console.log('✅ Token deployment info loaded');
             } else {
                 console.log('⚠️ No token deployment info found');
+            }
+            
+            // Get the token identifier from wallet balance (use bech32 format key for transfers)
+            try {
+                const balance = await this.issuerWallet.getBalance();
+                if (balance && balance.tokenBalances) {
+                    for (const [tokenId, tokenBalance] of balance.tokenBalances) {
+                        this.tokenId = tokenId; // Use bech32 format key
+                        console.log('✅ Token ID loaded from wallet (bech32):', this.tokenId);
+                        if (tokenBalance.tokenMetadata && tokenBalance.tokenMetadata.rawTokenIdentifier) {
+                            console.log('✅ Raw Token ID (hex):', tokenBalance.tokenMetadata.rawTokenIdentifier.toString('hex'));
+                        }
+                        return;
+                    }
+                }
+                
+                // Fallback to environment variable if available
+                this.tokenId = process.env.TOKEN_ID;
+                if (this.tokenId) {
+                    console.log('✅ Token ID loaded from environment (fallback):', this.tokenId);
+                } else {
+                    console.log('⚠️ TOKEN_ID not found in environment variables or wallet');
+                }
+            } catch (balanceError) {
+                console.log('⚠️ Could not get wallet balance, using env TOKEN_ID');
+                this.tokenId = process.env.TOKEN_ID;
+                if (this.tokenId) {
+                    console.log('✅ Token ID loaded from environment:', this.tokenId);
+                } else {
+                    console.log('⚠️ TOKEN_ID not found in environment variables');
+                }
             }
         } catch (error) {
             console.error('❌ Failed to load token info:', error);
@@ -97,10 +120,34 @@ class TokenService {
                 mintTxHash = mintResult.hash;
             }
             
+            // Wait a moment for the mint transaction to be processed
+            console.log('⏳ Waiting for mint transaction to be processed...');
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Check balance to confirm tokens are available
+            try {
+                const balance = await this.issuerWallet.getBalance();
+                console.log('💰 Current wallet balance after mint:', balance);
+                if (balance && balance.tokenBalances && this.tokenId) {
+                    const tokenBalance = balance.tokenBalances.get(this.tokenId);
+                    if (tokenBalance) {
+                        console.log(`✅ Confirmed token balance: ${tokenBalance.balance} units`);
+                    } else {
+                        console.log('⚠️ Token not found in balance, but proceeding with transfer...');
+                    }
+                }
+            } catch (balanceError) {
+                console.log('⚠️ Could not check balance:', balanceError.message);
+            }
+            
             console.log(`🔄 Step 2: Transferring ${mintAmount} units to user address: ${sparkAddress}`);
             
             // Step 2: Transfer the minted tokens from our wallet to the user's address
-            const transferResult = await this.issuerWallet.transferTokens(sparkAddress, mintAmount);
+            const transferResult = await this.issuerWallet.transferTokens({
+                tokenId: this.tokenId,
+                receiverSparkAddress: sparkAddress,
+                tokenAmount: mintAmount
+            });
             
             console.log('✅ Step 2 complete: Tokens transferred to user');
             console.log('📝 Transfer result:', transferResult);
@@ -116,6 +163,11 @@ class TokenService {
             } else if (transferResult && transferResult.hash) {
                 transferTxHash = transferResult.hash;
             }
+
+            // Schedule balance cache update for issuer wallet (5 second delay)
+            const issuerAddress = await this.issuerWallet.getSparkAddress();
+            balanceCacheService.scheduleBalanceUpdate(issuerAddress, 'token_claim_mint_transfer');
+            console.log('📅 Scheduled balance cache update for issuer wallet');
 
             return {
                 txHash: transferTxHash || transferResult, // Return the transfer transaction hash as primary
