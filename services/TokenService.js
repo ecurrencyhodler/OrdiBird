@@ -133,19 +133,35 @@ class TokenService {
             
             const mintAmount = 1000000n; // 1 token with 6 decimals
             
-            // Simulate processing time
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            console.log(`🪙 Mock Step 1: Minting ${mintAmount} units to service wallet...`);
             
-            // Generate mock transaction hash
-            const mockTxHash = 'mock_tx_' + Math.random().toString(36).substr(2, 9);
+            // Simulate mint processing time
+            await new Promise(resolve => setTimeout(resolve, 1000));
             
-            console.log('✅ Mock token minted and transferred');
-            console.log('📝 Mock transaction hash:', mockTxHash);
+            // Generate mock mint transaction hash
+            const mockMintTxHash = 'mock_mint_tx_' + Math.random().toString(36).substr(2, 9);
+            console.log('✅ Mock Step 1 complete: Tokens minted to service wallet');
+            console.log('📝 Mock mint transaction hash:', mockMintTxHash);
+            
+            console.log(`🔄 Mock Step 2: Transferring ${mintAmount} units to user address: ${sparkAddress}`);
+            
+            // Simulate transfer processing time
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Generate mock transfer transaction hash
+            const mockTransferTxHash = 'mock_transfer_tx_' + Math.random().toString(36).substr(2, 9);
+            console.log('✅ Mock Step 2 complete: Tokens transferred to user');
+            console.log('📝 Mock transfer transaction hash:', mockTransferTxHash);
 
             return {
-                txHash: mockTxHash,
+                txHash: mockTransferTxHash, // Return the transfer transaction hash as primary
+                mintTxHash: mockMintTxHash, // Also include the mint transaction hash
                 amount: mintAmount.toString(),
-                tokenId: this.tokenId
+                tokenId: this.tokenId,
+                steps: {
+                    mint: mockMintTxHash,
+                    transfer: mockTransferTxHash
+                }
             };
 
         } catch (error) {
