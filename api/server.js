@@ -188,6 +188,8 @@ app.post('/api/claim/token', async (req, res) => {
 
     } catch (error) {
         console.error('Error claiming token:', error);
+        console.error('Error stack:', error.stack);
+        console.error('Error message:', error.message);
 
         // Handle specific error types
         if (error.message.includes('insufficient funds')) {
@@ -204,9 +206,11 @@ app.post('/api/claim/token', async (req, res) => {
             });
         }
 
+        // Return more detailed error for debugging
         res.status(500).json({
             success: false,
-            error: 'Failed to claim token. Please try again later.'
+            error: `Failed to claim token: ${error.message}`,
+            details: error.stack ? error.stack.split('\n')[0] : 'No stack trace available'
         });
     }
 });
