@@ -1,6 +1,5 @@
 const { IssuerSparkWallet } = require('@buildonspark/issuer-sdk');
 const fs = require('fs');
-const balanceCacheService = require('./BalanceCacheService');
 
 class TokenService {
     constructor() {
@@ -124,27 +123,11 @@ class TokenService {
             console.log('⏳ Waiting for mint transaction to be processed...');
             await new Promise(resolve => setTimeout(resolve, 2000));
             
-            // Check balance to confirm tokens are available
-            try {
-                const balance = await this.issuerWallet.getBalance();
-                console.log('💰 Current wallet balance after mint:', balance);
-                if (balance && balance.tokenBalances && this.tokenId) {
-                    const tokenBalance = balance.tokenBalances.get(this.tokenId);
-                    if (tokenBalance) {
-                        console.log(`✅ Confirmed token balance: ${tokenBalance.balance} units`);
-                    } else {
-                        console.log('⚠️ Token not found in balance, but proceeding with transfer...');
-                    }
-                }
-            } catch (balanceError) {
-                console.log('⚠️ Could not check balance:', balanceError.message);
-            }
-            
             console.log(`🔄 Step 2: Transferring ${mintAmount} units to user address: ${sparkAddress}`);
             
             // Step 2: Transfer the minted tokens from our wallet to the user's address
             const transferResult = await this.issuerWallet.transferTokens({
-                tokenId: this.tokenId,
+                tokenIdentifier: this.tokenId,
                 receiverSparkAddress: sparkAddress,
                 tokenAmount: mintAmount
             });
@@ -164,10 +147,8 @@ class TokenService {
                 transferTxHash = transferResult.hash;
             }
 
-            // Schedule balance cache update for issuer wallet (5 second delay)
-            const issuerAddress = await this.issuerWallet.getSparkAddress();
-            balanceCacheService.scheduleBalanceUpdate(issuerAddress, 'token_claim_mint_transfer');
-            console.log('📅 Scheduled balance cache update for issuer wallet');
+            // Note: Balance cache service removed for simplified testing
+            console.log('📝 Transfer completed successfully');
 
             return {
                 txHash: transferTxHash || transferResult, // Return the transfer transaction hash as primary

@@ -49,26 +49,38 @@ async function testCompleteFlowWithCache() {
                 },
             });
             
-            // Get current balance to find token ID
-            const currentBalance = await wallet.getBalance();
-            let tokenId = null;
-            if (currentBalance && currentBalance.tokenBalances) {
-                for (const [id, tokenBal] of currentBalance.tokenBalances) {
-                    tokenId = id; // Use bech32 format
-                    console.log('🆔 Using token ID:', tokenId);
+            // Get token ID from environment or wallet balance
+            let tokenId = process.env.TOKEN_ID;
+            
+            if (!tokenId) {
+                // Fallback to getting from wallet balance
+                const currentBalance = await wallet.getBalance();
+                if (currentBalance && currentBalance.tokenBalances) {
+                    for (const [id, tokenBal] of currentBalance.tokenBalances) {
+                        tokenId = id; // Use bech32 format
+                        console.log('🆔 Using token ID from wallet:', tokenId);
+                        console.log('💰 Available balance:', tokenBal.balance.toString(), 'units');
+                        break;
+                    }
+                }
+            } else {
+                console.log('🆔 Using token ID from environment:', tokenId);
+                // Still check balance for logging
+                const currentBalance = await wallet.getBalance();
+                if (currentBalance && currentBalance.tokenBalances && currentBalance.tokenBalances.has(tokenId)) {
+                    const tokenBal = currentBalance.tokenBalances.get(tokenId);
                     console.log('💰 Available balance:', tokenBal.balance.toString(), 'units');
-                    break;
                 }
             }
             
             if (!tokenId) {
-                throw new Error('No tokens found for transfer');
+                throw new Error('No token ID found in environment or wallet');
             }
             
             // Direct transfer without minting
             const transferAmount = 1000000n; // 1 token with 6 decimals
             const transferResult = await wallet.transferTokens({
-                tokenId: tokenId,
+                tokenIdentifier: tokenId,
                 receiverSparkAddress: targetAddress,
                 tokenAmount: transferAmount
             });
