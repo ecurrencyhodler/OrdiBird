@@ -1,50 +1,19 @@
-const fs = require('fs').promises;
-const path = require('path');
-
 class RateLimitService {
     constructor() {
-        this.dataFile = path.join(__dirname, '..', 'data', 'claims.json');
+        // Use in-memory storage for serverless environment
         this.claims = new Map();
-        this.loadClaims();
+        console.log('📝 RateLimitService initialized with in-memory storage (serverless mode)');
     }
 
     async loadClaims() {
-        try {
-            // Ensure data directory exists
-            const dataDir = path.dirname(this.dataFile);
-            await fs.mkdir(dataDir, { recursive: true });
-
-            // Try to load existing claims
-            const data = await fs.readFile(this.dataFile, 'utf8');
-            const claimsData = JSON.parse(data);
-            
-            // Convert array back to Map
-            this.claims = new Map(claimsData);
-            console.log(`✅ Loaded ${this.claims.size} existing claims`);
-        } catch (error) {
-            if (error.code === 'ENOENT') {
-                console.log('📝 No existing claims file found, starting fresh');
-                this.claims = new Map();
-            } else {
-                console.error('❌ Error loading claims:', error);
-                this.claims = new Map();
-            }
-        }
+        // No-op for serverless environment - data is ephemeral
+        console.log('📝 Serverless mode: Claims are stored in memory only');
     }
 
     async saveClaims() {
-        try {
-            // Ensure data directory exists
-            const dataDir = path.dirname(this.dataFile);
-            await fs.mkdir(dataDir, { recursive: true });
-
-            // Convert Map to array for JSON serialization
-            const claimsArray = Array.from(this.claims.entries());
-            await fs.writeFile(this.dataFile, JSON.stringify(claimsArray, null, 2));
-        } catch (error) {
-            console.error('❌ Error saving claims:', error);
-            throw error;
-        }
+        // No-op for serverless environment - data is ephemeral
+        // In a production environment, you would save to a database like Redis, DynamoDB, etc.
+        console.log('📝 Serverless mode: Claims saved to memory (ephemeral)');
     }
 
     hasClaimedToday(sparkAddress) {
@@ -158,4 +127,3 @@ class RateLimitService {
 }
 
 module.exports = RateLimitService;
-
