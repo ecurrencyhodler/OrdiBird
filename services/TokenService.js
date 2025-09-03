@@ -1,79 +1,125 @@
-const { SparkWallet } = require('@buildonspark/spark-sdk');
+const { IssuerSparkWallet } = require('@buildonspark/issuer-sdk');
+const fs = require('fs');
 
 class TokenService {
     constructor() {
-        this.spark = null;
-        this.tokenId = 'BIRD_TOKEN_123'; // Mock token ID
+        this.issuerWallet = null;
+        this.tokenId = null;
         this.isInitialized = false;
-        this.tokenCreated = false;
+        this.tokenInfo = null;
     }
 
     async initialize() {
         try {
-            console.log('🔧 Initializing Spark wallet...');
+            console.log('🔧 Initializing Issuer Spark wallet...');
             console.log('🌐 Network:', process.env.SPARK_NETWORK || 'mainnet');
-            console.log('🔗 RPC URL:', process.env.SPARK_RPC_URL || 'https://spark-mainnet-rpc.buildonbitcoin.com');
             
-            // Initialize Spark wallet
-            const { wallet } = await SparkWallet.initialize({
-                network: process.env.SPARK_NETWORK || 'mainnet',
-                rpcUrl: process.env.SPARK_RPC_URL || 'https://spark-mainnet-rpc.buildonbitcoin.com',
-                mnemonicOrSeed: process.env.SPARK_MNEMONIC, // Mnemonic for the service wallet
+            // Initialize Issuer Spark wallet with the same mnemonic used for deployment
+            const { wallet, mnemonic } = await IssuerSparkWallet.initialize({
+                mnemonicOrSeed: process.env.SPARK_MNEMONIC,
+                options: {
+                    network: process.env.SPARK_NETWORK || 'mainnet',
+                },
             });
             
-            this.spark = wallet;
+            this.issuerWallet = wallet;
+            
+            // Load token info from deployment
+            await this.loadTokenInfo();
+            
             this.isInitialized = true;
-            console.log('✅ Spark wallet initialized successfully');
+            console.log('✅ Issuer Spark wallet initialized successfully');
+            console.log('🆔 Token ID:', this.tokenId);
         } catch (error) {
-            console.error('❌ Failed to initialize Spark wallet:', error);
+            console.error('❌ Failed to initialize Issuer Spark wallet:', error);
             throw error;
         }
     }
 
-    // Mock methods for development - will be replaced with actual Spark SDK integration
+    async loadTokenInfo() {
+        try {
+            // Load token info from the deployment file
+            if (fs.existsSync('bird-token-info.json')) {
+                const tokenData = JSON.parse(fs.readFileSync('bird-token-info.json', 'utf8'));
+                this.tokenInfo = tokenData;
+                
+                // Try to get the actual token ID from the wallet's balance
+                const balance = await this.issuerWallet.getBalance();
+                if (balance && balance.tokenBalances && balance.tokenBalances.size > 0) {
+                    // Get the first (and should be only) token ID from the balance
+                    this.tokenId = Array.from(balance.tokenBalances.keys())[0];
+                    console.log('✅ Token ID loaded from wallet balance:', this.tokenId);
+                } else {
+                    console.log('⚠️ No token balance found, token may not be properly deployed');
+                }
+            } else {
+                console.log('⚠️ No token deployment info found');
+            }
+        } catch (error) {
+            console.error('❌ Failed to load token info:', error);
+            throw error;
+        }
+    }
 
     async claimToken(sparkAddress) {
         if (!this.isInitialized) {
             throw new Error('Token service not initialized');
         }
 
+        if (!this.tokenId) {
+            throw new Error('Token ID not found. Please ensure the token was properly deployed.');
+        }
+
         try {
             console.log(`🎯 Processing token claim for address: ${sparkAddress}`);
-            
-            // Check if we need to create the token first
-            if (!this.tokenCreated) {
-                await this.createToken();
-            }
+            console.log(`🆔 Using token ID: ${this.tokenId}`);
             
             // Amount: 1 BIRD token (1,000,000 units with 6 decimals)
             const mintAmount = 1000000n; // 1 token with 6 decimals
             
-            console.log(`🪙 Step 1: Minting ${mintAmount} units of BIRD token to service wallet...`);
+            console.log(`🪙 Step 1: Minting ${mintAmount} units of BIRD token to issuer wallet...`);
             
-            // Step 1: Mint tokens to our service wallet
-            const mintResult = await this.spark.mintTokens({
-                tokenIdentifier: this.tokenId,
-                tokenAmount: mintAmount
-            });
+            // Step 1: Mint tokens to our issuer wallet
+            const mintResult = await this.issuerWallet.mintTokens(mintAmount);
             
-            console.log('✅ Step 1 complete: Tokens minted to service wallet');
-            console.log('📝 Mint transaction hash:', mintResult);
+            console.log('✅ Step 1 complete: Tokens minted to issuer wallet');
+            console.log('📝 Mint result:', mintResult);
+            
+            // Extract transaction hash from mint result
+            let mintTxHash = null;
+            if (typeof mintResult === 'string') {
+                mintTxHash = mintResult;
+            } else if (mintResult && mintResult.txid) {
+                mintTxHash = mintResult.txid;
+            } else if (mintResult && mintResult.transactionId) {
+                mintTxHash = mintResult.transactionId;
+            } else if (mintResult && mintResult.hash) {
+                mintTxHash = mintResult.hash;
+            }
             
             console.log(`🔄 Step 2: Transferring ${mintAmount} units to user address: ${sparkAddress}`);
             
             // Step 2: Transfer the minted tokens from our wallet to the user's address
-            const transferResult = await this.spark.transferTokens({
-                tokenIdentifier: this.tokenId,
-                tokenAmount: mintAmount,
-                receiverSparkAddress: sparkAddress
-            });
+            const transferResult = await this.issuerWallet.transferTokens(sparkAddress, mintAmount);
             
             console.log('✅ Step 2 complete: Tokens transferred to user');
-            console.log('📝 Transfer transaction hash:', transferResult);
+            console.log('📝 Transfer result:', transferResult);
+            
+            // Extract transaction hash from transfer result
+            let transferTxHash = null;
+            if (typeof transferResult === 'string') {
+                transferTxHash = transferResult;
+            } else if (transferResult && transferResult.txid) {
+                transferTxHash = transferResult.txid;
+            } else if (transferResult && transferResult.transactionId) {
+                transferTxHash = transferResult.transactionId;
+            } else if (transferResult && transferResult.hash) {
+                transferTxHash = transferResult.hash;
+            }
 
             return {
-                txHash: transferResult, // Return the transfer transaction hash as primary
-                mintTxHash: mintResult, // Also include the mint transaction hash
+                txHash: transferTxHash || transferResult, // Return the transfer transaction hash as primary
+                mintTxHash: mintTxHash || mintResult, // Also include the mint transaction hash
                 amount: mintAmount.toString(),
                 tokenId: this.tokenId,
                 steps: {
@@ -84,48 +130,14 @@ class TokenService {
 
         } catch (error) {
             console.error('❌ Failed to claim token:', error);
+            console.error('❌ Error details:', error.message);
+            console.error('❌ Error stack:', error.stack);
             
-            // Fallback to mock implementation for development
-            console.log('🔄 Falling back to mock implementation...');
-            return await this.mockClaimToken(sparkAddress);
+            // Don't fall back to mock - report the actual error
+            throw new Error(`Token claim failed: ${error.message}`);
         }
     }
 
-    async createToken() {
-        try {
-            console.log('🏗️ Creating BIRD token using Spark SDK...');
-            
-            const tokenName = process.env.TOKEN_NAME || 'OrdiBird';
-            const tokenTicker = process.env.TOKEN_TICKER || 'BIRD';
-            const decimals = parseInt(process.env.TOKEN_DECIMALS) || 6;
-            const maxSupply = process.env.TOKEN_MAX_SUPPLY ? BigInt(process.env.TOKEN_MAX_SUPPLY.replace('n', '')) : 0n;
-            const isFreezable = process.env.TOKEN_IS_FREEZABLE === 'true';
-            
-            // Create the token using Spark SDK's createToken method
-            const tokenCreationTx = await this.spark.createToken({
-                tokenName: tokenName,
-                tokenTicker: tokenTicker,
-                decimals: decimals,
-                maxSupply: maxSupply,
-                isFreezable: isFreezable
-            });
-            
-            this.tokenId = tokenCreationTx; // The transaction ID is the token identifier
-            this.tokenCreated = true;
-            
-            console.log('✅ BIRD token created successfully!');
-            console.log('🆔 Token Creation TX:', tokenCreationTx);
-            console.log('📝 Token Name:', tokenName);
-            console.log('🏷️ Token Ticker:', tokenTicker);
-            console.log('🔢 Decimals:', decimals);
-            console.log('📊 Max Supply:', maxSupply.toString());
-            console.log('❄️ Freezable:', isFreezable);
-            
-        } catch (error) {
-            console.error('❌ Failed to create token:', error);
-            throw error;
-        }
-    }
 
     async mockClaimToken(sparkAddress) {
         try {
@@ -172,14 +184,29 @@ class TokenService {
 
     async getTokenInfo() {
         try {
-            // Return mock token info
+            // Get current balance to show real token info
+            let balance = '0';
+            try {
+                const walletBalance = await this.issuerWallet.getBalance();
+                if (walletBalance && walletBalance.tokenBalances && this.tokenId) {
+                    const tokenBalance = walletBalance.tokenBalances.get(this.tokenId);
+                    if (tokenBalance) {
+                        balance = tokenBalance.balance.toString();
+                    }
+                }
+            } catch (balanceError) {
+                console.log('⚠️ Could not get balance:', balanceError.message);
+            }
+            
             return {
                 tokenId: this.tokenId,
                 name: process.env.TOKEN_NAME || 'OrdiBird',
                 ticker: process.env.TOKEN_TICKER || 'BIRD',
                 decimals: parseInt(process.env.TOKEN_DECIMALS) || 6,
-                balance: '0',
-                maxSupply: process.env.TOKEN_MAX_SUPPLY || '0'
+                balance: balance,
+                maxSupply: process.env.TOKEN_MAX_SUPPLY || '0',
+                deployed: this.tokenInfo ? this.tokenInfo.deployed : false,
+                deploymentTime: this.tokenInfo ? this.tokenInfo.deploymentTime : null
             };
         } catch (error) {
             console.error('Error getting token info:', error);
@@ -196,8 +223,8 @@ class TokenService {
         try {
             console.log('🔑 Generating new Spark address...');
             
-            // Generate a new address using the Spark wallet
-            const address = await this.spark.getSparkAddress();
+            // Generate a new address using the issuer wallet
+            const address = await this.issuerWallet.getSparkAddress();
             
             console.log('✅ New Spark address generated:', address);
             
@@ -220,7 +247,7 @@ class TokenService {
         }
 
         try {
-            const address = await this.spark.getSparkAddress();
+            const address = await this.issuerWallet.getSparkAddress();
             return {
                 address: address,
                 timestamp: new Date().toISOString()
