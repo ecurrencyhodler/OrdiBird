@@ -56,62 +56,6 @@ app.get('/health', (req, res) => {
     });
 });
 
-// Debug endpoint to test Spark SDK initialization
-app.get('/api/debug/spark', async (req, res) => {
-    try {
-        console.log('🔍 Debug: Testing Spark SDK initialization...');
-        console.log('🔍 Environment variables:');
-        console.log('  SPARK_NETWORK:', process.env.SPARK_NETWORK);
-        console.log('  SPARK_RPC_URL:', process.env.SPARK_RPC_URL);
-        console.log('  SPARK_MNEMONIC exists:', !!process.env.SPARK_MNEMONIC);
-        console.log('  SPARK_MNEMONIC length:', process.env.SPARK_MNEMONIC ? process.env.SPARK_MNEMONIC.length : 0);
-        
-        // Test Spark SDK import
-        const { SparkWallet } = require('@buildonspark/spark-sdk');
-        console.log('✅ Spark SDK imported successfully');
-        
-        // Test initialization
-        const { wallet } = await SparkWallet.initialize({
-            network: process.env.SPARK_NETWORK || 'mainnet',
-            rpcUrl: process.env.SPARK_RPC_URL || 'https://spark-mainnet-rpc.buildonbitcoin.com',
-            mnemonicOrSeed: process.env.SPARK_MNEMONIC,
-        });
-        
-        console.log('✅ Spark wallet initialized successfully');
-        
-        // Test getting address
-        const address = await wallet.getSparkAddress();
-        console.log('✅ Got wallet address:', address);
-        
-        res.json({
-            success: true,
-            data: {
-                sparkSdkImported: true,
-                walletInitialized: true,
-                address: address,
-                network: process.env.SPARK_NETWORK || 'mainnet',
-                rpcUrl: process.env.SPARK_RPC_URL || 'https://spark-mainnet-rpc.buildonbitcoin.com',
-                mnemonicProvided: !!process.env.SPARK_MNEMONIC
-            }
-        });
-        
-    } catch (error) {
-        console.error('❌ Debug error:', error);
-        console.error('❌ Error stack:', error.stack);
-        
-        res.status(500).json({
-            success: false,
-            error: error.message,
-            stack: error.stack,
-            envVars: {
-                SPARK_NETWORK: process.env.SPARK_NETWORK,
-                SPARK_RPC_URL: process.env.SPARK_RPC_URL,
-                SPARK_MNEMONIC_PROVIDED: !!process.env.SPARK_MNEMONIC,
-                SPARK_MNEMONIC_LENGTH: process.env.SPARK_MNEMONIC ? process.env.SPARK_MNEMONIC.length : 0
-            }
-        });
-    }
-});
 
 // Get token info endpoint
 app.get('/api/token/info', async (req, res) => {
