@@ -245,5 +245,14 @@ async function initializeServices() {
 }
 
 
-// Export the Express app for Vercel
-module.exports = app;
+// For Vercel serverless functions, we need to export a handler function
+module.exports = async (req, res) => {
+    // Initialize services on first request
+    await initializeServices();
+    
+    // Handle the request with the Express app
+    return app(req, res);
+};
+
+// Also export the app for local development
+module.exports.app = app;
