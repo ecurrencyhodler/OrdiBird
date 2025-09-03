@@ -59,6 +59,7 @@ app.get('/health', (req, res) => {
 // Get token info endpoint
 app.get('/api/token/info', async (req, res) => {
     try {
+        await initializeServices();
         const tokenInfo = await tokenService.getTokenInfo();
         res.json({
             success: true,
@@ -145,6 +146,9 @@ app.get('/api/claim/status/:address', async (req, res) => {
 // Claim token endpoint (rate limiting disabled for testing)
 app.post('/api/claim/token', async (req, res) => {
     try {
+        // Initialize services first
+        await initializeServices();
+        
         // Validate request body
         const { error, value } = claimTokenSchema.validate(req.body);
         if (error) {
@@ -240,18 +244,6 @@ async function initializeServices() {
     }
 }
 
-// Middleware to ensure services are initialized
-app.use(async (req, res, next) => {
-    try {
-        await initializeServices();
-        next();
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            error: 'Service initialization failed'
-        });
-    }
-});
 
 // Export the Express app for Vercel
 module.exports = app;
