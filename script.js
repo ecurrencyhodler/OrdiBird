@@ -129,11 +129,6 @@ class OrdiBird {
                 }
             }
             
-            // Debug: Press W to trigger win screen
-            if (e.code === 'KeyW' && this.gameState === 'playing') {
-                this.score = 40;
-                this.gameWin();
-            }
         });
         
         this.canvas.addEventListener('click', () => {
