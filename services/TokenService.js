@@ -45,26 +45,41 @@ class TokenService {
                 await this.createToken();
             }
             
-            // Mint and transfer 1 BIRD token (1,000,000 units with 6 decimals)
+            // Amount: 1 BIRD token (1,000,000 units with 6 decimals)
             const mintAmount = 1000000n; // 1 token with 6 decimals
             
-            console.log(`🪙 Minting ${mintAmount} units of BIRD token...`);
+            console.log(`🪙 Step 1: Minting ${mintAmount} units of BIRD token to service wallet...`);
             
-            // Use Spark SDK to transfer tokens
-            // First, we need to mint tokens to our wallet, then transfer them
-            const result = await this.spark.transferTokens({
+            // Step 1: Mint tokens to our service wallet
+            const mintResult = await this.spark.mintTokens({
+                tokenIdentifier: this.tokenId,
+                tokenAmount: mintAmount
+            });
+            
+            console.log('✅ Step 1 complete: Tokens minted to service wallet');
+            console.log('📝 Mint transaction hash:', mintResult);
+            
+            console.log(`🔄 Step 2: Transferring ${mintAmount} units to user address: ${sparkAddress}`);
+            
+            // Step 2: Transfer the minted tokens from our wallet to the user's address
+            const transferResult = await this.spark.transferTokens({
                 tokenIdentifier: this.tokenId,
                 tokenAmount: mintAmount,
                 receiverSparkAddress: sparkAddress
             });
             
-            console.log('✅ Token minted and transferred successfully');
-            console.log('📝 Transaction hash:', result);
+            console.log('✅ Step 2 complete: Tokens transferred to user');
+            console.log('📝 Transfer transaction hash:', transferResult);
 
             return {
-                txHash: result,
+                txHash: transferResult, // Return the transfer transaction hash as primary
+                mintTxHash: mintResult, // Also include the mint transaction hash
                 amount: mintAmount.toString(),
-                tokenId: this.tokenId
+                tokenId: this.tokenId,
+                steps: {
+                    mint: mintResult,
+                    transfer: transferResult
+                }
             };
 
         } catch (error) {
