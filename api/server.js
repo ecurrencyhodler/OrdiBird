@@ -224,34 +224,34 @@ app.use('*', (req, res) => {
     });
 });
 
-// Initialize and start server
-async function startServer() {
-    try {
-        // Initialize token service
-        await tokenService.initialize();
-        console.log('✅ Token service initialized');
+// Initialize token service on first request
+let isInitialized = false;
 
-        // Start server
-        app.listen(PORT, () => {
-            console.log(`🚀 OrdiBird Token Service running on port ${PORT}`);
-            console.log(`🌐 Network: ${process.env.SPARK_NETWORK || 'mainnet'}`);
-            console.log(`📊 Health check: http://localhost:${PORT}/health`);
-        });
-    } catch (error) {
-        console.error('❌ Failed to start server:', error);
-        process.exit(1);
+async function initializeServices() {
+    if (!isInitialized) {
+        try {
+            await tokenService.initialize();
+            console.log('✅ Token service initialized');
+            isInitialized = true;
+        } catch (error) {
+            console.error('❌ Failed to initialize token service:', error);
+            throw error;
+        }
     }
 }
 
-// Handle graceful shutdown
-process.on('SIGINT', () => {
-    console.log('\n🛑 Shutting down server...');
-    process.exit(0);
+// Middleware to ensure services are initialized
+app.use(async (req, res, next) => {
+    try {
+        await initializeServices();
+        next();
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: 'Service initialization failed'
+        });
+    }
 });
 
-process.on('SIGTERM', () => {
-    console.log('\n🛑 Shutting down server...');
-    process.exit(0);
-});
-
-startServer();
+// Export the Express app for Vercel
+module.exports = app;
