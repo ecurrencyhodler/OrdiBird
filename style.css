@@ -74,6 +74,14 @@ body {
     display: flex;
 }
 
+/* Ensure all game overlays are hidden by default */
+.game-overlay:not(.active) {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
 .overlay-content {
     background: linear-gradient(135deg, #1d1d1d 0%, #0a0a0a 100%);
     padding: 40px;
@@ -375,6 +383,42 @@ body {
         width: auto;
     }
     
+    /* Ensure start screen is always visible on mobile when active */
+    #startScreen.active {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        z-index: 20 !important;
+        pointer-events: auto !important;
+    }
+    
+    /* Ensure start screen is hidden when not active */
+    #startScreen:not(.active) {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        z-index: -1 !important;
+    }
+    
+    /* Ensure win screen is hidden by default on mobile */
+    #winScreen:not(.active) {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        z-index: -1 !important;
+    }
+    
+    /* Ensure win screen is only visible when explicitly active */
+    #winScreen.active {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        z-index: 10 !important;
+    }
+    
     .overlay-content h2 {
         font-size: 1.3rem;
         margin-bottom: 10px;
@@ -525,10 +569,7 @@ body {
         
         /* Fix any potential overflow issues */
         #winScreen {
-            /* Ensure win screen is always visible when active */
-            display: flex !important;
-            visibility: visible !important;
-            opacity: 1 !important;
+            /* Win screen visibility controlled by .active class */
         }
         
         #winScreen .overlay-content {

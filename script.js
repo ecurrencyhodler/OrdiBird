@@ -68,7 +68,49 @@ class OrdiBird {
         this.gameLoopInterval = null;
         
         this.setupEventListeners();
-        this.startScreen.classList.add('active'); // Make start screen visible initially
+        
+        // Force reset all screens to ensure proper initialization
+        this.startScreen.classList.remove('active');
+        this.gameOverScreen.classList.remove('active');
+        this.winScreen.classList.remove('active');
+        const thanksScreen = document.getElementById('thanksScreen');
+        if (thanksScreen) {
+            thanksScreen.classList.remove('active');
+        }
+        
+        // Clear any persistent game state from localStorage
+        localStorage.removeItem('ordiBirdGameState');
+        localStorage.removeItem('ordiBirdScore');
+        
+        // Reset game state and ensure start screen is visible
+        this.gameState = 'start';
+        this.score = 0;
+        this.startScreen.classList.add('active');
+        
+        // Debug: Log the current state
+        console.log('Game initialized with state:', this.gameState);
+        console.log('Start screen active:', this.startScreen.classList.contains('active'));
+        console.log('Win screen active:', this.winScreen.classList.contains('active'));
+        
+        // Force a small delay to ensure DOM is fully ready
+        setTimeout(() => {
+            // Double-check screen states
+            console.log('After delay - Start screen active:', this.startScreen.classList.contains('active'));
+            console.log('After delay - Win screen active:', this.winScreen.classList.contains('active'));
+            
+            // Ensure start screen is visible
+            if (!this.startScreen.classList.contains('active')) {
+                this.startScreen.classList.add('active');
+                console.log('Forced start screen to be active');
+            }
+            
+            // Ensure win screen is hidden
+            if (this.winScreen.classList.contains('active')) {
+                this.winScreen.classList.remove('active');
+                console.log('Forced win screen to be hidden');
+            }
+        }, 100);
+        
         this.drawStartScreen();
     }
     
