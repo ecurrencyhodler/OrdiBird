@@ -396,24 +396,22 @@ class OrdiBird {
     }
     
     updateGarbageMan() {
-        // Don't spawn or update if in flag mode
-        if (this.flagMode) {
-            this.garbageMan = null;
-            return;
-        }
-        
-        // Update existing garbage man
+        // Update existing garbage man (even in flag mode, let it finish its journey)
         if (this.garbageMan) {
             this.garbageMan.x -= this.garbageManSpeed; // Move left (toward player)
             
-            // Remove if off screen to the left
-            if (this.garbageMan.x + 40 < 0) {
+            // Calculate actual width based on natural aspect ratio (same as collision detection)
+            const manWidth = this.garbageManImage.complete ? 
+                (this.garbageManImage.naturalWidth / this.garbageManImage.naturalHeight) * 180 : 120;
+            
+            // Remove only when completely off screen to the left (same logic as garbage cans)
+            if (this.garbageMan.x + manWidth < 0) {
                 this.garbageMan = null;
             }
         }
         
-        // Spawn new garbage man if none exists and it's time
-        if (!this.garbageMan && this.frameCount % this.garbageManSpawnRate === 0) {
+        // Only spawn new garbage man if not in flag mode
+        if (!this.flagMode && !this.garbageMan && this.frameCount % this.garbageManSpawnRate === 0) {
             this.spawnGarbageMan();
         }
     }
