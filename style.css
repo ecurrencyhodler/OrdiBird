@@ -24,6 +24,7 @@ body {
 
 .game-header {
     margin-bottom: 20px;
+    position: relative;
 }
 
 
@@ -40,6 +41,7 @@ body {
     color: #0066cc;
     opacity: 0.8;
 }
+
 
 
 
@@ -281,11 +283,13 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 20px;
+    position: relative;
 }
 
 .github-link {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
     align-items: center;
 }
@@ -309,6 +313,19 @@ body {
 .github-link svg {
     width: 24px;
     height: 24px;
+}
+
+.about-link {
+    color: #0066cc;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.about-link:hover {
+    color: #004499;
+    text-decoration: underline;
 }
 
 .score-display {
@@ -363,6 +380,12 @@ body {
     .game-info {
         flex-direction: column;
         text-align: center;
+    }
+    
+    .github-link {
+        position: static;
+        transform: none;
+        margin: 10px 0;
     }
 }
 
