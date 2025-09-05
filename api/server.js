@@ -210,6 +210,123 @@ app.get('/api/address/current', async (req, res) => {
     }
 });
 
+// Get blocked addresses endpoint
+app.get('/api/blocklist', async (req, res) => {
+    try {
+        await initializeServices();
+        const blockedAddresses = tokenService.getBlockedAddresses();
+        res.json({
+            success: true,
+            data: {
+                blockedAddresses,
+                count: blockedAddresses.length
+            }
+        });
+    } catch (error) {
+        console.error('Error getting blocked addresses:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to get blocked addresses'
+        });
+    }
+});
+
+// Add address to blocklist endpoint (admin only - requires auth header)
+app.post('/api/blocklist/add', async (req, res) => {
+    try {
+        // Simple admin authentication check
+        const authHeader = req.headers.authorization;
+        if (!authHeader || authHeader !== `Bearer ${process.env.ADMIN_SECRET}`) {
+            return res.status(401).json({
+                success: false,
+                error: 'Unauthorized - Admin access required'
+            });
+        }
+
+        await initializeServices();
+        
+        const { address } = req.body;
+        if (!address) {
+            return res.status(400).json({
+                success: false,
+                error: 'Address is required'
+            });
+        }
+
+        // Validate address format
+        const { error } = Joi.string().pattern(/^sp1[a-zA-Z0-9]{20,}$/).validate(address);
+        if (error) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid Spark address format'
+            });
+        }
+
+        tokenService.addBlockedAddress(address);
+        
+        res.json({
+            success: true,
+            data: {
+                message: `Address ${address} added to blocklist`,
+                blockedAddresses: tokenService.getBlockedAddresses()
+            }
+        });
+    } catch (error) {
+        console.error('Error adding address to blocklist:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to add address to blocklist'
+        });
+    }
+});
+
+// Remove address from blocklist endpoint (admin only - requires auth header)
+app.post('/api/blocklist/remove', async (req, res) => {
+    try {
+        // Simple admin authentication check
+        const authHeader = req.headers.authorization;
+        if (!authHeader || authHeader !== `Bearer ${process.env.ADMIN_SECRET}`) {
+            return res.status(401).json({
+                success: false,
+                error: 'Unauthorized - Admin access required'
+            });
+        }
+
+        await initializeServices();
+        
+        const { address } = req.body;
+        if (!address) {
+            return res.status(400).json({
+                success: false,
+                error: 'Address is required'
+            });
+        }
+
+        const removed = tokenService.removeBlockedAddress(address);
+        
+        if (removed) {
+            res.json({
+                success: true,
+                data: {
+                    message: `Address ${address} removed from blocklist`,
+                    blockedAddresses: tokenService.getBlockedAddresses()
+                }
+            });
+        } else {
+            res.status(404).json({
+                success: false,
+                error: 'Address not found in blocklist'
+            });
+        }
+    } catch (error) {
+        console.error('Error removing address from blocklist:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to remove address from blocklist'
+        });
+    }
+});
+
 // Check if address has already claimed
 app.get('/api/claim/status/:address', async (req, res) => {
     try {
@@ -261,7 +378,7 @@ app.post('/api/claim/token', async (req, res) => {
         
         const validation = validateChallenge(challengeToken, challengeSolution);
         if (!validation.valid) {
-            console.log(`🚫 Challenge validation failed: ${validation.reason}`);
+            console.log(`� Challenge validation failed: ${validation.reason}`);
             return res.status(400).json({
                 success: false,
                 error: 'Security verification failed. Please try again.'

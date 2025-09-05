@@ -7,6 +7,10 @@ class TokenService {
         this.tokenId = null;
         this.isInitialized = false;
         this.tokenInfo = null;
+        // Blocklist of addresses that cannot receive tokens
+        this.blockedAddresses = new Set([
+            'sp1pgssx93dcxfmn9ylggcvqpfljecwgx83t947mztzkelhgfrg0x3zvfhsc30547'
+        ]);
     }
 
     async initialize() {
@@ -90,6 +94,11 @@ class TokenService {
 
         if (!this.tokenId) {
             throw new Error('Token ID not found. Please ensure the token was properly deployed.');
+        }
+
+        // Check if address is blocked
+        if (this.isAddressBlocked(sparkAddress)) {
+            throw new Error(`Address ${sparkAddress} is blocked from receiving tokens`);
         }
 
         try {
@@ -247,6 +256,31 @@ class TokenService {
             console.error('❌ Failed to get current address:', error);
             throw error;
         }
+    }
+
+    // Check if an address is blocked from receiving tokens
+    isAddressBlocked(address) {
+        return this.blockedAddresses.has(address);
+    }
+
+    // Add an address to the blocklist
+    addBlockedAddress(address) {
+        this.blockedAddresses.add(address);
+        console.log(`🚫 Address added to blocklist: ${address}`);
+    }
+
+    // Remove an address from the blocklist
+    removeBlockedAddress(address) {
+        const removed = this.blockedAddresses.delete(address);
+        if (removed) {
+            console.log(`✅ Address removed from blocklist: ${address}`);
+        }
+        return removed;
+    }
+
+    // Get all blocked addresses
+    getBlockedAddresses() {
+        return Array.from(this.blockedAddresses);
     }
 
     // Additional methods can be added here as needed
