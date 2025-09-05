@@ -1,3 +1,9 @@
+// Initialize Vercel Analytics
+let analytics;
+if (typeof window !== 'undefined' && window.va) {
+    analytics = window.va;
+}
+
 class OrdiBird {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
@@ -141,6 +147,11 @@ class OrdiBird {
     }
     
     startGame() {
+        // Track game start event
+        if (analytics && analytics.track) {
+            analytics.track('game_started');
+        }
+        
         this.gameState = 'playing';
         this.score = 0;
         this.bitcoin.x = 150; // Reset bird position
@@ -602,12 +613,23 @@ class OrdiBird {
     
     gameOver() {
         console.log('Game Over triggered! Score:', this.score);
+        
+        // Track game over event with score
+        if (analytics && analytics.track) {
+            analytics.track('game_over', { score: this.score });
+        }
+        
         this.gameState = 'gameOver';
         this.finalScoreElement.textContent = this.score;
         
         if (this.score > this.highScore) {
             this.highScore = this.score;
             localStorage.setItem('ordiBirdHighScore', this.highScore);
+            
+            // Track new high score
+            if (analytics && analytics.track) {
+                analytics.track('new_high_score', { score: this.score });
+            }
         }
         
         this.gameOverScreen.classList.add('active');
@@ -628,6 +650,12 @@ class OrdiBird {
     
     gameWin() {
         console.log('Game Win triggered! Score:', this.score);
+        
+        // Track game win event with score
+        if (analytics && analytics.track) {
+            analytics.track('game_completed', { score: this.score });
+        }
+        
         this.gameState = 'gameWin';
         this.winScoreElement.textContent = this.score;
         
@@ -1049,6 +1077,14 @@ class OrdiBird {
             const result = await response.json();
 
             if (result.success) {
+                // Track successful token claim
+                if (analytics && analytics.track) {
+                    analytics.track('token_claimed', { 
+                        score: this.score,
+                        transactionHash: result.data.transactionHash 
+                    });
+                }
+                
                 // Show transaction details first
                 alert(`🎉 Reward claimed successfully!\n\nYour reward has been sent to: ${sparkAddress}\n\nTransaction Hash: ${result.data.transactionHash}\n\nClick OK to continue.`);
                 
@@ -1058,6 +1094,13 @@ class OrdiBird {
                 // Show "Thanks for Playing!" screen after user clicks OK
                 this.showThanksForPlayingScreen();
             } else {
+                // Track failed token claim
+                if (analytics && analytics.track) {
+                    analytics.track('token_claim_failed', { 
+                        score: this.score,
+                        error: result.error 
+                    });
+                }
                 // Handle specific error messages
                 if (result.maintenance) {
                     alert(`🔧 ${result.error}`);
