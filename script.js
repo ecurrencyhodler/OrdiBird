@@ -125,6 +125,12 @@ class OrdiBird {
         this.restartButton.addEventListener('click', () => this.restartGame());
         this.claimTokenButton.addEventListener('click', () => this.claimToken());
         
+        // Add play again button event listener
+        const playAgainButton = document.getElementById('playAgainButton');
+        if (playAgainButton) {
+            playAgainButton.addEventListener('click', () => this.restartGame());
+        }
+        
         document.addEventListener('keydown', (e) => {
             if (e.code === 'Space') {
                 e.preventDefault();
@@ -657,15 +663,15 @@ class OrdiBird {
         }
         
         this.gameState = 'gameWin';
-        this.winScoreElement.textContent = this.score;
+        this.thanksScoreElement.textContent = this.score;
         
         if (this.score > this.highScore) {
             this.highScore = this.score;
             localStorage.setItem('ordiBirdHighScore', this.highScore);
         }
         
-        this.winScreen.classList.add('active');
-        console.log('Win screen should be visible now');
+        // Skip directly to "Thanks for Playing" screen
+        this.showThanksForPlayingScreen();
         this.createConfetti();
         
         // Stop the game loop interval
