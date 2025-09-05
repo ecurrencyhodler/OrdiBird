@@ -1094,43 +1094,93 @@ class OrdiBird {
         }
     }
 
+    // Load Turnstile site key from server
+    async loadTurnstileSiteKey() {
+        try {
+            const response = await fetch('/api/turnstile/sitekey');
+            const result = await response.json();
+            if (result.success && result.siteKey) {
+                return result.siteKey;
+            } else {
+                throw new Error('Failed to load site key');
+            }
+        } catch (error) {
+            console.error('Error loading Turnstile site key:', error);
+            throw new Error('Failed to load Turnstile configuration');
+        }
+    }
+
+    // Initialize Turnstile widget with dynamic site key
+    async initializeTurnstileWidget() {
+        try {
+            const siteKey = await this.loadTurnstileSiteKey();
+            const turnstileWidget = document.querySelector('.cf-turnstile');
+            if (turnstileWidget) {
+                turnstileWidget.setAttribute('data-sitekey', siteKey);
+                console.log('✅ Turnstile widget initialized with site key');
+            }
+        } catch (error) {
+            console.error('Failed to initialize Turnstile widget:', error);
+        }
+    }
+
     // Cloudflare Turnstile integration
     async getTurnstileToken() {
         try {
+            // Initialize widget if not already done
+            await this.initializeTurnstileWidget();
+            
             // Wait for Turnstile to be ready
             if (typeof turnstile === 'undefined') {
                 throw new Error('Turnstile not loaded');
             }
 
-            // Create a container for the Turnstile widget
-            const turnstileContainer = document.createElement('div');
-            turnstileContainer.id = 'turnstile-widget';
-            document.body.appendChild(turnstileContainer);
+            // Get the token from the existing widget
+            const turnstileWidget = document.querySelector('.cf-turnstile');
+            if (!turnstileWidget) {
+                throw new Error('Turnstile widget not found');
+            }
 
-            // Execute Turnstile and get token
-            const token = await new Promise((resolve, reject) => {
-                const widgetId = turnstile.render('#turnstile-widget', {
-                    sitekey: '0x4AAAAAABzQ5hA0KhMaQVm3', // Turnstile site key from .env
-                    callback: function(token) {
-                        console.log('Turnstile callback received with token:', token);
-                        // Clean up the widget
-                        if (turnstileContainer.parentNode) {
-                            turnstileContainer.parentNode.removeChild(turnstileContainer);
+            // Get the response token from the widget
+            const token = turnstile.getResponse(turnstileWidget);
+            
+            if (!token) {
+                // If no token, trigger the widget to get one
+                return new Promise((resolve, reject) => {
+                    // Reset the widget first
+                    turnstile.reset(turnstileWidget);
+                    
+                    // Set up callback to get token when ready
+                    const originalCallback = turnstileWidget.getAttribute('data-callback');
+                    turnstileWidget.setAttribute('data-callback', 'turnstileCallback');
+                    
+                    // Create global callback function
+                    window.turnstileCallback = function(token) {
+                        console.log('Turnstile token received:', token);
+                        // Restore original callback if it existed
+                        if (originalCallback) {
+                            turnstileWidget.setAttribute('data-callback', originalCallback);
+                        } else {
+                            turnstileWidget.removeAttribute('data-callback');
                         }
+                        delete window.turnstileCallback;
                         resolve(token);
-                    },
-                    'error-callback': function(error) {
-                        console.error('Turnstile error callback:', error);
-                        // Clean up the widget
-                        if (turnstileContainer.parentNode) {
-                            turnstileContainer.parentNode.removeChild(turnstileContainer);
-                        }
+                    };
+                    
+                    // Set error callback
+                    window.turnstileErrorCallback = function(error) {
+                        console.error('Turnstile error:', error);
+                        delete window.turnstileCallback;
+                        delete window.turnstileErrorCallback;
                         reject(new Error('Turnstile verification failed: ' + error));
-                    }
+                    };
+                    
+                    turnstileWidget.setAttribute('data-error-callback', 'turnstileErrorCallback');
+                    
+                    // Trigger the widget
+                    turnstile.render(turnstileWidget);
                 });
-                
-                console.log('Turnstile widget rendered with ID:', widgetId);
-            });
+            }
 
             console.log('✅ Turnstile token obtained:', token);
             return token;

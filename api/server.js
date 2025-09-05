@@ -97,6 +97,14 @@ app.get('/health', (req, res) => {
     });
 });
 
+// Get Turnstile site key endpoint (public key only)
+app.get('/api/turnstile/sitekey', (req, res) => {
+    res.json({
+        success: true,
+        siteKey: process.env.TURNSTILE_SITE_KEY
+    });
+});
+
 
 // Get token info endpoint
 app.get('/api/token/info', async (req, res) => {
