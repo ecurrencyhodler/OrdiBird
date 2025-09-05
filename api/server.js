@@ -506,8 +506,26 @@ async function initializeServices() {
 
 // For Vercel serverless functions, we need to export a handler function
 module.exports = async (req, res) => {
-    // Initialize services on first request
-    await initializeServices();
+    // Only initialize services for endpoints that need them
+    // Challenge generation doesn't need TokenService initialization
+    const needsInitialization = req.url && (
+        req.url.includes('/api/claim/token') ||
+        req.url.includes('/api/token/info') ||
+        req.url.includes('/api/blocklist') ||
+        req.url.includes('/api/address')
+    );
+    
+    if (needsInitialization) {
+        try {
+            await initializeServices();
+        } catch (error) {
+            console.error('Service initialization failed:', error);
+            return res.status(500).json({
+                success: false,
+                error: 'Service initialization failed'
+            });
+        }
+    }
     
     // Handle the request with the Express app
     return app(req, res);
