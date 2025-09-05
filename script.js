@@ -1037,11 +1037,11 @@ class OrdiBird {
         claimButton.disabled = true;
 
         try {
-            // Step 1: Get reCAPTCHA token
-            console.log('🔐 Getting reCAPTCHA token...');
-            const recaptchaToken = await this.getRecaptchaToken();
+            // Step 1: Get Turnstile token
+            console.log('🔐 Getting Turnstile token...');
+            const turnstileToken = await this.getTurnstileToken();
             
-            // Step 2: Submit token claim with reCAPTCHA token
+            // Step 2: Submit token claim with Turnstile token
             claimButton.textContent = 'Claiming Reward...';
             console.log('🪙 Submitting token claim...');
             
@@ -1052,7 +1052,7 @@ class OrdiBird {
                 },
                 body: JSON.stringify({
                     sparkAddress: sparkAddress,
-                    recaptchaToken: recaptchaToken
+                    turnstileToken: turnstileToken
                 })
             });
 
@@ -1073,7 +1073,7 @@ class OrdiBird {
                     alert(`🔧 ${result.error}`);
                 } else if (result.error && result.error.includes('Only 20 tokens can be claimed every minute')) {
                     alert(`⏰ ${result.error}`);
-                } else if (result.error && result.error.includes('reCAPTCHA')) {
+                } else if (result.error && result.error.includes('Turnstile')) {
                     alert(`🤖 Security verification failed. Please try again.`);
                 } else {
                     // Show generic error message
@@ -1082,7 +1082,7 @@ class OrdiBird {
             }
         } catch (error) {
             console.error('Error claiming token:', error);
-            if (error.message.includes('reCAPTCHA')) {
+            if (error.message.includes('Turnstile')) {
                 alert('❌ Security verification failed. Please try again.');
             } else {
                 alert('❌ Network error. Please check your connection and try again.');
@@ -1094,30 +1094,33 @@ class OrdiBird {
         }
     }
 
-    // reCAPTCHA v3 integration
-    async getRecaptchaToken() {
+    // Cloudflare Turnstile integration
+    async getTurnstileToken() {
         try {
-            // Wait for reCAPTCHA to be ready
-            if (typeof grecaptcha === 'undefined') {
-                throw new Error('reCAPTCHA not loaded');
+            // Wait for Turnstile to be ready
+            if (typeof turnstile === 'undefined') {
+                throw new Error('Turnstile not loaded');
             }
 
-            // Wait for reCAPTCHA to be ready
-            await new Promise((resolve) => {
-                grecaptcha.ready(resolve);
+            // Execute Turnstile and get token
+            const token = await new Promise((resolve, reject) => {
+                turnstile.render(document.body, {
+                    sitekey: '0x4AAAAAABzQ5hA0KhMaQVm3', // Your actual Turnstile site key
+                    callback: function(token) {
+                        resolve(token);
+                    },
+                    'error-callback': function() {
+                        reject(new Error('Turnstile verification failed'));
+                    }
+                });
             });
 
-            // Execute reCAPTCHA Enterprise and get token
-            const token = await grecaptcha.enterprise.execute('6LdXlr4rAAAAABz9qqz9t7WCzeHwD1Hy5GlwQcwr', {
-                action: 'claim_token'
-            });
-
-            console.log('✅ reCAPTCHA token obtained');
+            console.log('✅ Turnstile token obtained');
             return token;
             
         } catch (error) {
-            console.error('reCAPTCHA failed:', error);
-            throw new Error('reCAPTCHA verification failed');
+            console.error('Turnstile failed:', error);
+            throw new Error('Turnstile verification failed');
         }
     }
     

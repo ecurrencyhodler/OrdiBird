@@ -9,7 +9,7 @@ require('dotenv').config();
 const { SparkWallet } = require('@buildonspark/spark-sdk');
 const TokenService = require('../services/TokenService');
 const RateLimitService = require('../services/RateLimitService');
-const RecaptchaService = require('../services/RecaptchaService');
+const TurnstileService = require('../services/TurnstileService');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -22,8 +22,7 @@ app.use(helmet({
             scriptSrc: [
                 "'self'",
                 "'unsafe-inline'",
-                "https://www.google.com",
-                "https://www.gstatic.com"
+                "https://challenges.cloudflare.com"
             ],
             styleSrc: [
                 "'self'",
@@ -36,10 +35,10 @@ app.use(helmet({
             ],
             connectSrc: [
                 "'self'",
-                "https://www.google.com"
+                "https://challenges.cloudflare.com"
             ],
             frameSrc: [
-                "https://www.google.com"
+                "https://challenges.cloudflare.com"
             ]
         }
     }
@@ -70,7 +69,7 @@ const limiter = rateLimit({
 // Initialize services
 const tokenService = new TokenService();
 const rateLimitService = new RateLimitService();
-const recaptchaService = new RecaptchaService();
+const turnstileService = new TurnstileService();
 
 // Validation schemas
 const claimTokenSchema = Joi.object({
@@ -81,10 +80,10 @@ const claimTokenSchema = Joi.object({
             'string.pattern.base': 'Invalid Spark address format (should start with "sp1" and be at least 20 characters long)',
             'any.required': 'Spark address is required'
         }),
-    recaptchaToken: Joi.string()
+    turnstileToken: Joi.string()
         .required()
         .messages({
-            'any.required': 'reCAPTCHA token is required'
+            'any.required': 'Turnstile token is required'
         })
 });
 
@@ -303,7 +302,7 @@ app.get('/api/claim/status/:address', async (req, res) => {
     }
 });
 
-// Claim token endpoint with reCAPTCHA verification
+// Claim token endpoint with Turnstile verification
 app.post('/api/claim/token', async (req, res) => {
     try {
         // Step 1: Validate request body
@@ -315,30 +314,29 @@ app.post('/api/claim/token', async (req, res) => {
             });
         }
 
-        const { sparkAddress, recaptchaToken } = req.body;
+        const { sparkAddress, turnstileToken } = req.body;
 
-        // Step 2: Verify reCAPTCHA token
-        if (!recaptchaToken) {
+        // Step 2: Verify Turnstile token
+        if (!turnstileToken) {
             return res.status(400).json({
                 success: false,
-                error: 'reCAPTCHA verification required. Please try again.'
+                error: 'Turnstile verification required. Please try again.'
             });
         }
 
-        console.log('🔐 Verifying reCAPTCHA token...');
+        console.log('🔐 Verifying Turnstile token...');
         const clientIP = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'];
-        const recaptchaResult = await recaptchaService.verifyToken(recaptchaToken, clientIP);
+        const turnstileResult = await turnstileService.verifyToken(turnstileToken, clientIP);
         
-        if (!recaptchaService.isHuman(recaptchaResult)) {
-            console.log(`🤖 reCAPTCHA verification failed: ${recaptchaResult.error}`);
+        if (!turnstileService.isHuman(turnstileResult)) {
+            console.log(`🤖 Turnstile verification failed: ${turnstileResult.error}`);
             return res.status(400).json({
                 success: false,
-                error: recaptchaService.getErrorMessage(recaptchaResult),
-                recaptchaScore: recaptchaResult.score
+                error: turnstileService.getErrorMessage(turnstileResult)
             });
         }
 
-        console.log(`✅ reCAPTCHA verification successful (score: ${recaptchaResult.score})`);
+        console.log(`✅ Turnstile verification successful`);
         
         // Step 3: Initialize services
         await initializeServices();
@@ -379,8 +377,7 @@ app.post('/api/claim/token', async (req, res) => {
                 sparkAddress,
                 tokenAmount: result.amount,
                 timestamp: new Date().toISOString(),
-                recaptchaScore: recaptchaResult.score,
-                recaptchaVerified: true
+                turnstileVerified: true
             }
         });
 
@@ -404,10 +401,10 @@ app.post('/api/claim/token', async (req, res) => {
             });
         }
 
-        if (error.message.includes('reCAPTCHA')) {
+        if (error.message.includes('Turnstile')) {
             return res.status(400).json({
                 success: false,
-                error: 'reCAPTCHA verification failed. Please try again.'
+                error: 'Turnstile verification failed. Please try again.'
             });
         }
 
@@ -487,7 +484,7 @@ module.exports.app = app;
 if (require.main === module) {
     app.listen(PORT, () => {
         console.log(`🚀 OrdiBird server running on port ${PORT}`);
-        console.log(`🔐 reCAPTCHA + Rate Limiting protection enabled`);
+        console.log(`🔐 Turnstile + Rate Limiting protection enabled`);
         console.log(`🌐 Network: ${process.env.SPARK_NETWORK || 'mainnet'}`);
     });
 }
