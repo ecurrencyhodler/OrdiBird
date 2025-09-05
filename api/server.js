@@ -310,127 +310,127 @@ app.get('/api/claim/status/:address', async (req, res) => {
     }
 });
 
-// Claim token endpoint with Turnstile verification
-app.post('/api/claim/token', async (req, res) => {
-    try {
-        // Step 1: Validate request body
-        const { error, value } = claimTokenSchema.validate(req.body);
-        if (error) {
-            return res.status(400).json({
-                success: false,
-                error: error.details[0].message
-            });
-        }
+// Claim token endpoint with Turnstile verification - DISABLED
+// app.post('/api/claim/token', async (req, res) => {
+//     try {
+//         // Step 1: Validate request body
+//         const { error, value } = claimTokenSchema.validate(req.body);
+//         if (error) {
+//             return res.status(400).json({
+//                 success: false,
+//                 error: error.details[0].message
+//             });
+//         }
 
-        const { sparkAddress, turnstileToken } = req.body;
+//         const { sparkAddress, turnstileToken } = req.body;
 
-        // Step 2: Verify Turnstile token
-        console.log('🔐 Verifying Turnstile token...');
-        console.log('Token length:', turnstileToken.length);
-        console.log('Token preview:', turnstileToken.substring(0, 50) + '...');
+//         // Step 2: Verify Turnstile token
+//         console.log('🔐 Verifying Turnstile token...');
+//         console.log('Token length:', turnstileToken.length);
+//         console.log('Token preview:', turnstileToken.substring(0, 50) + '...');
         
-        // Extract client IP with proper priority order as per Cloudflare documentation
-        const clientIP = req.headers['cf-connecting-ip'] || 
-                         req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
-                         req.headers['x-real-ip'] ||
-                         req.connection.remoteAddress ||
-                         req.socket.remoteAddress ||
-                         req.ip ||
-                         'unknown';
-        console.log('Client IP:', clientIP);
+//         // Extract client IP with proper priority order as per Cloudflare documentation
+//         const clientIP = req.headers['cf-connecting-ip'] || 
+//                          req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+//                          req.headers['x-real-ip'] ||
+//                          req.connection.remoteAddress ||
+//                          req.socket.remoteAddress ||
+//                          req.ip ||
+//                          'unknown';
+//         console.log('Client IP:', clientIP);
         
-        const turnstileResult = await turnstileService.verifyToken(turnstileToken, clientIP);
-        console.log('Turnstile verification result:', turnstileResult);
+//         const turnstileResult = await turnstileService.verifyToken(turnstileToken, clientIP);
+//         console.log('Turnstile verification result:', turnstileResult);
         
-        if (!turnstileService.isHuman(turnstileResult)) {
-            console.log(`🤖 Turnstile verification failed: ${turnstileResult.error}`);
-            console.log('Error codes:', turnstileResult.errorCodes);
-            return res.status(400).json({
-                success: false,
-                error: turnstileService.getErrorMessage(turnstileResult)
-            });
-        }
+//         if (!turnstileService.isHuman(turnstileResult)) {
+//             console.log(`🤖 Turnstile verification failed: ${turnstileResult.error}`);
+//             console.log('Error codes:', turnstileResult.errorCodes);
+//             return res.status(400).json({
+//                 success: false,
+//                 error: turnstileService.getErrorMessage(turnstileResult)
+//             });
+//         }
 
-        console.log(`✅ Turnstile verification successful`);
+//         console.log(`✅ Turnstile verification successful`);
         
-        // Step 3: Initialize services
-        await initializeServices();
+//         // Step 3: Initialize services
+//         await initializeServices();
 
-        // Step 4: Check global rate limit first
-        if (rateLimitService.isGlobalRateLimitExceeded()) {
-            const globalStats = rateLimitService.getGlobalMintStats();
-            console.log(`🚫 Global rate limit exceeded: ${globalStats.tokensThisMinute}/${globalStats.maxTokensPerMinute} tokens this minute`);
-            return res.status(429).json({
-                success: false,
-                error: 'Only 20 tokens can be claimed every minute. Please wait before trying to claim your token again.',
-                globalStats: globalStats
-            });
-        }
+//         // Step 4: Check global rate limit first
+//         if (rateLimitService.isGlobalRateLimitExceeded()) {
+//             const globalStats = rateLimitService.getGlobalMintStats();
+//             console.log(`🚫 Global rate limit exceeded: ${globalStats.tokensThisMinute}/${globalStats.maxTokensPerMinute} tokens this minute`);
+//             return res.status(429).json({
+//                 success: false,
+//                 error: 'Only 20 tokens can be claimed every minute. Please wait before trying to claim your token again.',
+//                 globalStats: globalStats
+//             });
+//         }
 
-        // Step 5: Rate limiting (disabled for testing)
-        // const hasClaimed = await rateLimitService.hasClaimedToday(sparkAddress);
-        // if (hasClaimed) {
-        //     return res.status(429).json({
-        //         success: false,
-        //         error: 'Address has already claimed a token today',
-        //         retryAfter: rateLimitService.getNextClaimTime(sparkAddress)
-        //     });
-        // }
+//         // Step 5: Rate limiting (disabled for testing)
+//         // const hasClaimed = await rateLimitService.hasClaimedToday(sparkAddress);
+//         // if (hasClaimed) {
+//         //     return res.status(429).json({
+//         //         success: false,
+//         //         error: 'Address has already claimed a token today',
+//         //         retryAfter: rateLimitService.getNextClaimTime(sparkAddress)
+//         //     });
+//         // }
 
-        // Step 6: Process token claim
-        console.log(`🪙 Processing token claim for ${sparkAddress}`);
-        const result = await tokenService.claimToken(sparkAddress);
+//         // Step 6: Process token claim
+//         console.log(`🪙 Processing token claim for ${sparkAddress}`);
+//         const result = await tokenService.claimToken(sparkAddress);
 
-        // Step 7: Record the claim and global mint
-        await rateLimitService.recordClaim(sparkAddress);
-        rateLimitService.recordGlobalMint();
+//         // Step 7: Record the claim and global mint
+//         await rateLimitService.recordClaim(sparkAddress);
+//         rateLimitService.recordGlobalMint();
 
-        res.json({
-            success: true,
-            data: {
-                transactionHash: result.txHash,
-                sparkAddress,
-                tokenAmount: result.amount,
-                timestamp: new Date().toISOString(),
-                turnstileVerified: true
-            }
-        });
+//         res.json({
+//             success: true,
+//             data: {
+//                 transactionHash: result.txHash,
+//                 sparkAddress,
+//                 tokenAmount: result.amount,
+//                 timestamp: new Date().toISOString(),
+//                 turnstileVerified: true
+//             }
+//         });
 
-    } catch (error) {
-        console.error('Error claiming token:', error);
-        console.error('Error stack:', error.stack);
-        console.error('Error message:', error.message);
+//     } catch (error) {
+//         console.error('Error claiming token:', error);
+//         console.error('Error stack:', error.stack);
+//         console.error('Error message:', error.message);
 
-        // Handle specific error types
-        if (error.message.includes('insufficient funds')) {
-            return res.status(500).json({
-                success: false,
-                error: 'Insufficient funds for token minting'
-            });
-        }
+//         // Handle specific error types
+//         if (error.message.includes('insufficient funds')) {
+//             return res.status(500).json({
+//                 success: false,
+//                 error: 'Insufficient funds for token minting'
+//             });
+//         }
 
-        if (error.message.includes('invalid address')) {
-            return res.status(400).json({
-                success: false,
-                error: 'Invalid Spark address'
-            });
-        }
+//         if (error.message.includes('invalid address')) {
+//             return res.status(400).json({
+//                 success: false,
+//                 error: 'Invalid Spark address'
+//             });
+//         }
 
-        if (error.message.includes('Turnstile')) {
-            return res.status(400).json({
-                success: false,
-                error: 'Turnstile verification failed. Please try again.'
-            });
-        }
+//         if (error.message.includes('Turnstile')) {
+//             return res.status(400).json({
+//                 success: false,
+//                 error: 'Turnstile verification failed. Please try again.'
+//             });
+//         }
 
-        // Return more detailed error for debugging
-        res.status(500).json({
-            success: false,
-            error: `Failed to claim token: ${error.message}`,
-            details: error.stack ? error.stack.split('\n')[0] : 'No stack trace available'
-        });
-    }
-});
+//         // Return more detailed error for debugging
+//         res.status(500).json({
+//             success: false,
+//             error: `Failed to claim token: ${error.message}`,
+//             details: error.stack ? error.stack.split('\n')[0] : 'No stack trace available'
+//         });
+//     }
+// });
 
 // Error handling middleware
 app.use((error, req, res, next) => {
