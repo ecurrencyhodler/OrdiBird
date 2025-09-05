@@ -1094,7 +1094,7 @@ class OrdiBird {
         }
     }
 
-    // Cloudflare Turnstile integration
+    // Cloudflare Turnstile integration - following official documentation
     async getTurnstileToken() {
         try {
             // Wait for Turnstile to be ready
@@ -1109,52 +1109,24 @@ class OrdiBird {
             }
 
             // Get the response token from the widget
-            const token = turnstile.getResponse(turnstileWidget);
+            let token = turnstile.getResponse(turnstileWidget);
             
             if (!token) {
-                // If no token, trigger the widget to get one
-                return new Promise((resolve, reject) => {
-                    // Reset the widget first
-                    turnstile.reset(turnstileWidget);
-                    
-                    // Set up callback to get token when ready
-                    const originalCallback = turnstileWidget.getAttribute('data-callback');
-                    turnstileWidget.setAttribute('data-callback', 'turnstileCallback');
-                    
-                    // Create global callback function
-                    window.turnstileCallback = function(token) {
-                        console.log('Turnstile token received:', token);
-                        // Restore original callback if it existed
-                        if (originalCallback) {
-                            turnstileWidget.setAttribute('data-callback', originalCallback);
-                        } else {
-                            turnstileWidget.removeAttribute('data-callback');
-                        }
-                        delete window.turnstileCallback;
-                        resolve(token);
-                    };
-                    
-                    // Set error callback
-                    window.turnstileErrorCallback = function(error) {
-                        console.error('Turnstile error:', error);
-                        delete window.turnstileCallback;
-                        delete window.turnstileErrorCallback;
-                        reject(new Error('Turnstile verification failed: ' + error));
-                    };
-                    
-                    turnstileWidget.setAttribute('data-error-callback', 'turnstileErrorCallback');
-                    
-                    // Trigger the widget
-                    turnstile.render(turnstileWidget);
-                });
+                throw new Error('Please complete the security verification first');
             }
 
-            console.log('✅ Turnstile token obtained:', token);
+            // Check if token is expired
+            if (turnstile.isExpired && turnstile.isExpired(turnstileWidget)) {
+                turnstile.reset(turnstileWidget);
+                throw new Error('Security verification expired. Please try again.');
+            }
+
+            console.log('✅ Turnstile token obtained');
             return token;
             
         } catch (error) {
             console.error('Turnstile failed:', error);
-            throw new Error('Turnstile verification failed');
+            throw error;
         }
     }
     
@@ -1198,6 +1170,50 @@ class OrdiBird {
         // This ensures consistent timing across all devices (web and mobile)
     }
 }
+
+// Turnstile callback functions (global scope as required by Cloudflare documentation)
+window.onTurnstileSuccess = function(token) {
+    console.log('✅ Turnstile challenge completed successfully');
+    const claimButton = document.getElementById('claimTokenButton');
+    if (claimButton) {
+        claimButton.disabled = false;
+        claimButton.textContent = 'Claim Reward';
+    }
+};
+
+window.onTurnstileError = function(errorCode) {
+    console.error('❌ Turnstile error:', errorCode);
+    const claimButton = document.getElementById('claimTokenButton');
+    if (claimButton) {
+        claimButton.disabled = true;
+        claimButton.textContent = 'Security Check Failed';
+    }
+    // Auto-retry after a short delay
+    setTimeout(() => {
+        if (typeof turnstile !== 'undefined') {
+            const widget = document.querySelector('.cf-turnstile');
+            if (widget) {
+                turnstile.reset(widget);
+            }
+        }
+    }, 2000);
+};
+
+window.onTurnstileExpired = function() {
+    console.warn('⏰ Turnstile token expired');
+    const claimButton = document.getElementById('claimTokenButton');
+    if (claimButton) {
+        claimButton.disabled = true;
+        claimButton.textContent = 'Security Check Expired';
+    }
+    // Auto-reset the widget
+    if (typeof turnstile !== 'undefined') {
+        const widget = document.querySelector('.cf-turnstile');
+        if (widget) {
+            turnstile.reset(widget);
+        }
+    }
+};
 
 // Initialize the game when the page loads
 document.addEventListener('DOMContentLoaded', () => {

@@ -325,19 +325,26 @@ app.post('/api/claim/token', async (req, res) => {
         const { sparkAddress, turnstileToken } = req.body;
 
         // Step 2: Verify Turnstile token
-        if (!turnstileToken) {
-            return res.status(400).json({
-                success: false,
-                error: 'Turnstile verification required. Please try again.'
-            });
-        }
-
         console.log('🔐 Verifying Turnstile token...');
-        const clientIP = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'];
+        console.log('Token length:', turnstileToken.length);
+        console.log('Token preview:', turnstileToken.substring(0, 50) + '...');
+        
+        // Extract client IP with proper priority order as per Cloudflare documentation
+        const clientIP = req.headers['cf-connecting-ip'] || 
+                         req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+                         req.headers['x-real-ip'] ||
+                         req.connection.remoteAddress ||
+                         req.socket.remoteAddress ||
+                         req.ip ||
+                         'unknown';
+        console.log('Client IP:', clientIP);
+        
         const turnstileResult = await turnstileService.verifyToken(turnstileToken, clientIP);
+        console.log('Turnstile verification result:', turnstileResult);
         
         if (!turnstileService.isHuman(turnstileResult)) {
             console.log(`🤖 Turnstile verification failed: ${turnstileResult.error}`);
+            console.log('Error codes:', turnstileResult.errorCodes);
             return res.status(400).json({
                 success: false,
                 error: turnstileService.getErrorMessage(turnstileResult)

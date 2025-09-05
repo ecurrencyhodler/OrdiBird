@@ -1,9 +1,11 @@
 const https = require('https');
+const crypto = require('crypto');
 
 class TurnstileService {
     constructor() {
         this.secretKey = process.env.TURNSTILE_SECRET_KEY;
         this.verifyUrl = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
+        this.timeout = 10000; // 10 second timeout as recommended
         
         if (!this.secretKey) {
             console.warn('⚠️ TURNSTILE_SECRET_KEY not found in environment variables');
@@ -11,62 +13,97 @@ class TurnstileService {
     }
 
     /**
-     * Verify a Turnstile token
+     * Verify a Turnstile token with retry logic
      * @param {string} token - The Turnstile token from the frontend
      * @param {string} remoteip - The user's IP address (optional)
+     * @param {number} maxRetries - Maximum number of retry attempts
      * @returns {Promise<Object>} Verification result
      */
-    async verifyToken(token, remoteip = null) {
+    async verifyToken(token, remoteip = null, maxRetries = 3) {
         if (!this.secretKey) {
             return {
                 success: false,
-                error: 'Turnstile secret key not configured'
+                error: 'Turnstile secret key not configured',
+                errorCodes: ['missing-input-secret']
             };
         }
 
         if (!token) {
             return {
                 success: false,
-                error: 'No token provided'
+                error: 'No token provided',
+                errorCodes: ['missing-input-response']
             };
         }
 
-        try {
-            const postData = new URLSearchParams({
-                secret: this.secretKey,
-                response: token
-            });
-
-            // Add IP address if provided
-            if (remoteip) {
-                postData.append('remoteip', remoteip);
-            }
-
-            const response = await this.makeRequest(postData.toString());
-            
-            console.log('Turnstile API response:', response);
-
-            return {
-                success: response.success || false,
-                challengeTs: response['challenge_ts'],
-                hostname: response.hostname,
-                errorCodes: response['error-codes'] || [],
-                action: response.action,
-                cdata: response.cdata,
-                error: response.success ? null : this.getErrorFromCodes(response['error-codes'])
-            };
-
-        } catch (error) {
-            console.error('Turnstile verification error:', error);
+        // Validate token length (max 2048 characters as per documentation)
+        if (token.length > 2048) {
             return {
                 success: false,
-                error: 'Turnstile verification failed due to network error'
+                error: 'Token too long',
+                errorCodes: ['invalid-input-response']
             };
+        }
+
+        const idempotencyKey = crypto.randomUUID();
+
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                const postData = new URLSearchParams({
+                    secret: this.secretKey,
+                    response: token,
+                    idempotency_key: idempotencyKey
+                });
+
+                // Add IP address if provided
+                if (remoteip) {
+                    postData.append('remoteip', remoteip);
+                }
+
+                const response = await this.makeRequest(postData.toString());
+                
+                console.log(`Turnstile API response (attempt ${attempt}):`, response);
+
+                const result = {
+                    success: response.success || false,
+                    challengeTs: response['challenge_ts'],
+                    hostname: response.hostname,
+                    errorCodes: response['error-codes'] || [],
+                    action: response.action,
+                    cdata: response.cdata,
+                    error: response.success ? null : this.getErrorFromCodes(response['error-codes'])
+                };
+
+                // If successful or this is the last attempt, return the result
+                if (response.success || attempt === maxRetries) {
+                    return result;
+                }
+
+                // Wait before retrying (exponential backoff)
+                if (attempt < maxRetries) {
+                    await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+                }
+
+            } catch (error) {
+                console.error(`Turnstile verification error (attempt ${attempt}):`, error);
+                
+                // If this is the last attempt, return error
+                if (attempt === maxRetries) {
+                    return {
+                        success: false,
+                        error: 'Turnstile verification failed due to network error',
+                        errorCodes: ['internal-error']
+                    };
+                }
+
+                // Wait before retrying
+                await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+            }
         }
     }
 
     /**
-     * Make HTTP request to Turnstile API
+     * Make HTTP request to Turnstile API with timeout
      * @param {string} postData - URL encoded post data
      * @returns {Promise<Object>} API response
      */
@@ -79,8 +116,10 @@ class TurnstileService {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
-                    'Content-Length': Buffer.byteLength(postData)
-                }
+                    'Content-Length': Buffer.byteLength(postData),
+                    'User-Agent': 'OrdiBird-TurnstileService/1.0'
+                },
+                timeout: this.timeout
             };
 
             const req = https.request(options, (res) => {
@@ -102,6 +141,11 @@ class TurnstileService {
 
             req.on('error', (error) => {
                 reject(error);
+            });
+
+            req.on('timeout', () => {
+                req.destroy();
+                reject(new Error('Request timeout'));
             });
 
             req.write(postData);
