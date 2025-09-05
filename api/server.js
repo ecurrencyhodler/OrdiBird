@@ -5,22 +5,57 @@ const rateLimit = require('express-rate-limit');
 const Joi = require('joi');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const path = require('path');
 require('dotenv').config();
 
 const { SparkWallet } = require('@buildonspark/spark-sdk');
 const TokenService = require('../services/TokenService');
 const RateLimitService = require('../services/RateLimitService');
+const RecaptchaService = require('../services/RecaptchaService');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Security middleware
-app.use(helmet());
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: [
+                "'self'",
+                "'unsafe-inline'",
+                "https://www.google.com",
+                "https://www.gstatic.com"
+            ],
+            styleSrc: [
+                "'self'",
+                "'unsafe-inline'",
+                "https://fonts.googleapis.com"
+            ],
+            fontSrc: [
+                "'self'",
+                "https://fonts.gstatic.com"
+            ],
+            connectSrc: [
+                "'self'",
+                "https://www.google.com"
+            ],
+            frameSrc: [
+                "https://www.google.com"
+            ]
+        }
+    }
+}));
 app.use(cors({
     origin: ['http://localhost:8000', 'http://127.0.0.1:8000', 'http://localhost:54962', 'http://127.0.0.1:54962', 'https://ordi-bird-85k80lvtn-ecurrencyhodlers-projects.vercel.app', 'https://www.ordibird.com', 'https://ordibird.com'],
     credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
+
+// Serve static files from the root directory (for local development)
+if (require.main === module) {
+    app.use(express.static(path.join(__dirname, '..')));
+}
 
 // Rate limiting
 const limiter = rateLimit({
@@ -37,6 +72,7 @@ const limiter = rateLimit({
 // Initialize services
 const tokenService = new TokenService();
 const rateLimitService = new RateLimitService();
+const recaptchaService = new RecaptchaService();
 
 // Validation schemas
 const claimTokenSchema = Joi.object({
@@ -46,6 +82,11 @@ const claimTokenSchema = Joi.object({
         .messages({
             'string.pattern.base': 'Invalid Spark address format (should start with "sp1" and be at least 20 characters long)',
             'any.required': 'Spark address is required'
+        }),
+    recaptchaToken: Joi.string()
+        .required()
+        .messages({
+            'any.required': 'reCAPTCHA token is required'
         })
 });
 
@@ -362,46 +403,10 @@ app.get('/api/claim/status/:address', async (req, res) => {
     }
 });
 
-// Claim token endpoint with challenge validation - TEMPORARILY DISABLED
+// Claim token endpoint with reCAPTCHA verification
 app.post('/api/claim/token', async (req, res) => {
-    console.log('🚫 Token minting service temporarily disabled for maintenance');
-    
-    return res.status(503).json({
-        success: false,
-        error: 'Token minting service is temporarily disabled while we implement additional security features. Please check back soon!',
-        maintenance: true,
-        timestamp: new Date().toISOString()
-    });
-    
-    // ORIGINAL CODE COMMENTED OUT FOR MAINTENANCE
-    /*
     try {
-        // Step 1: Validate challenge first
-        const challengeToken = req.headers['x-challenge-token'];
-        const challengeSolution = req.headers['x-challenge-solution'];
-        
-        if (!challengeToken || !challengeSolution) {
-            return res.status(400).json({
-                success: false,
-                error: 'Security verification required. Please try again.'
-            });
-        }
-        
-        const validation = validateChallenge(challengeToken, challengeSolution);
-        if (!validation.valid) {
-            console.log(` Challenge validation failed: ${validation.reason}`);
-            return res.status(400).json({
-                success: false,
-                error: 'Security verification failed. Please try again.'
-            });
-        }
-        
-        console.log('🔐 Challenge validation successful');
-        
-        // Step 2: Initialize services
-        await initializeServices();
-        
-        // Step 3: Validate request body
+        // Step 1: Validate request body
         const { error, value } = claimTokenSchema.validate(req.body);
         if (error) {
             return res.status(400).json({
@@ -410,7 +415,33 @@ app.post('/api/claim/token', async (req, res) => {
             });
         }
 
-        const { sparkAddress } = value;
+        const { sparkAddress, recaptchaToken } = req.body;
+
+        // Step 2: Verify reCAPTCHA token
+        if (!recaptchaToken) {
+            return res.status(400).json({
+                success: false,
+                error: 'reCAPTCHA verification required. Please try again.'
+            });
+        }
+
+        console.log('🔐 Verifying reCAPTCHA token...');
+        const clientIP = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'];
+        const recaptchaResult = await recaptchaService.verifyToken(recaptchaToken, clientIP);
+        
+        if (!recaptchaService.isHuman(recaptchaResult)) {
+            console.log(`🤖 reCAPTCHA verification failed: ${recaptchaResult.error}`);
+            return res.status(400).json({
+                success: false,
+                error: recaptchaService.getErrorMessage(recaptchaResult),
+                recaptchaScore: recaptchaResult.score
+            });
+        }
+
+        console.log(`✅ reCAPTCHA verification successful (score: ${recaptchaResult.score})`);
+        
+        // Step 3: Initialize services
+        await initializeServices();
 
         // Step 4: Check global rate limit first
         if (rateLimitService.isGlobalRateLimitExceeded()) {
@@ -448,7 +479,8 @@ app.post('/api/claim/token', async (req, res) => {
                 sparkAddress,
                 tokenAmount: result.amount,
                 timestamp: new Date().toISOString(),
-                challengeValidated: true
+                recaptchaScore: recaptchaResult.score,
+                recaptchaVerified: true
             }
         });
 
@@ -472,6 +504,13 @@ app.post('/api/claim/token', async (req, res) => {
             });
         }
 
+        if (error.message.includes('reCAPTCHA')) {
+            return res.status(400).json({
+                success: false,
+                error: 'reCAPTCHA verification failed. Please try again.'
+            });
+        }
+
         // Return more detailed error for debugging
         res.status(500).json({
             success: false,
@@ -479,7 +518,6 @@ app.post('/api/claim/token', async (req, res) => {
             details: error.stack ? error.stack.split('\n')[0] : 'No stack trace available'
         });
     }
-    */
 });
 
 // Error handling middleware

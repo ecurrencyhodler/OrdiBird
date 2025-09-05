@@ -129,6 +129,13 @@ class OrdiBird {
                 }
             }
             
+            // Testing shortcut: Press 'w' to trigger win screen
+            if (e.code === 'KeyW') {
+                e.preventDefault();
+                console.log('🎮 Testing shortcut: Triggering win screen');
+                this.score = 50; // Set winning score
+                this.gameWin();
+            }
         });
         
         this.canvas.addEventListener('click', () => {
@@ -594,8 +601,8 @@ class OrdiBird {
             }
         }
         
-        // Check for flag mode at 49 points
-        if (this.score >= 49 && this.gameState === 'playing' && !this.flagMode) {
+        // Check for flag mode at 2 points (temporarily for testing)
+        if (this.score >= 2 && this.gameState === 'playing' && !this.flagMode) {
             this.enterFlagMode();
         }
     }
@@ -1023,27 +1030,26 @@ class OrdiBird {
         // Show loading state
         const claimButton = document.getElementById('claimTokenButton');
         const originalText = claimButton.textContent;
-        claimButton.textContent = 'Verifying...';
+        claimButton.textContent = 'Verifying Security...';
         claimButton.disabled = true;
 
         try {
-            // Step 1: Get and solve challenge (bot prevention)
-            console.log('🔐 Getting security challenge...');
-            const challengeData = await this.getAndSolveChallenge();
+            // Step 1: Get reCAPTCHA token
+            console.log('🔐 Getting reCAPTCHA token...');
+            const recaptchaToken = await this.getRecaptchaToken();
             
-            // Step 2: Submit token claim with challenge solution
+            // Step 2: Submit token claim with reCAPTCHA token
             claimButton.textContent = 'Claiming Reward...';
             console.log('🪙 Submitting token claim...');
             
             const response = await fetch('/api/claim/token', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'X-Challenge-Token': challengeData.challengeToken,
-                    'X-Challenge-Solution': challengeData.solution
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    sparkAddress: sparkAddress
+                    sparkAddress: sparkAddress,
+                    recaptchaToken: recaptchaToken
                 })
             });
 
@@ -1064,6 +1070,8 @@ class OrdiBird {
                     alert(`🔧 ${result.error}`);
                 } else if (result.error && result.error.includes('Only 20 tokens can be claimed every minute')) {
                     alert(`⏰ ${result.error}`);
+                } else if (result.error && result.error.includes('reCAPTCHA')) {
+                    alert(`🤖 Security verification failed. Please try again.`);
                 } else {
                     // Show generic error message
                     alert(`❌ Failed to claim reward: ${result.error}`);
@@ -1071,7 +1079,7 @@ class OrdiBird {
             }
         } catch (error) {
             console.error('Error claiming token:', error);
-            if (error.message.includes('Security verification failed')) {
+            if (error.message.includes('reCAPTCHA')) {
                 alert('❌ Security verification failed. Please try again.');
             } else {
                 alert('❌ Network error. Please check your connection and try again.');
@@ -1083,66 +1091,26 @@ class OrdiBird {
         }
     }
 
-    // Challenge system functions for bot prevention
-    async getAndSolveChallenge() {
+    // reCAPTCHA v3 integration
+    async getRecaptchaToken() {
         try {
-            // Request challenge from server
-            const challengeResponse = await fetch('/api/get-challenge', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            });
-            
-            if (!challengeResponse.ok) {
-                throw new Error('Failed to get security challenge');
+            // Wait for reCAPTCHA to be ready
+            if (typeof grecaptcha === 'undefined') {
+                throw new Error('reCAPTCHA not loaded');
             }
-            
-            const challenge = await challengeResponse.json();
-            console.log('🔐 Challenge received:', challenge.challengeId);
-            
-            // Solve the challenge using our algorithm
-            const solution = this.solveChallenge(challenge);
-            console.log('✅ Challenge solved');
-            
-            return {
-                challengeToken: challenge.challengeToken,
-                solution: solution
-            };
+
+            // Execute reCAPTCHA and get token
+            const token = await grecaptcha.execute('6LdXlr4rAAAAABz9qqz9t7WCzeHwD1Hy5GlwQcwr', {
+                action: 'claim_token'
+            });
+
+            console.log('✅ reCAPTCHA token obtained');
+            return token;
             
         } catch (error) {
-            console.error('Challenge failed:', error);
-            throw new Error('Security verification failed');
+            console.error('reCAPTCHA failed:', error);
+            throw new Error('reCAPTCHA verification failed');
         }
-    }
-
-    solveChallenge(challenge) {
-        const { data, timestamp, difficulty } = challenge;
-        
-        let result = data;
-        
-        // Apply transformations based on difficulty (must match server algorithm)
-        for (let i = 0; i < difficulty; i++) {
-            // Hash the result
-            result = btoa(result).replace(/[^a-zA-Z0-9]/g, '');
-            
-            // Add timestamp influence
-            const timeInfluence = (timestamp % 1000).toString();
-            result = result + timeInfluence;
-            
-            // Reverse every other iteration
-            if (i % 2 === 1) {
-                result = result.split('').reverse().join('');
-            }
-            
-            // Take substring
-            result = result.substring(0, 32);
-        }
-        
-        // Final transformation with domain-specific secret
-        // Use consistent secret that matches server
-        const domainSecret = 'ordibird-game-secret';
-        const finalResult = btoa(result + domainSecret).substring(0, 24);
-        
-        return finalResult;
     }
     
     showThanksForPlayingScreen() {
