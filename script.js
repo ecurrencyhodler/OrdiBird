@@ -1094,42 +1094,9 @@ class OrdiBird {
         }
     }
 
-    // Load Turnstile site key from server
-    async loadTurnstileSiteKey() {
-        try {
-            const response = await fetch('/api/turnstile/sitekey');
-            const result = await response.json();
-            if (result.success && result.siteKey) {
-                return result.siteKey;
-            } else {
-                throw new Error('Failed to load site key');
-            }
-        } catch (error) {
-            console.error('Error loading Turnstile site key:', error);
-            throw new Error('Failed to load Turnstile configuration');
-        }
-    }
-
-    // Initialize Turnstile widget with dynamic site key
-    async initializeTurnstileWidget() {
-        try {
-            const siteKey = await this.loadTurnstileSiteKey();
-            const turnstileWidget = document.querySelector('.cf-turnstile');
-            if (turnstileWidget) {
-                turnstileWidget.setAttribute('data-sitekey', siteKey);
-                console.log('✅ Turnstile widget initialized with site key');
-            }
-        } catch (error) {
-            console.error('Failed to initialize Turnstile widget:', error);
-        }
-    }
-
     // Cloudflare Turnstile integration
     async getTurnstileToken() {
         try {
-            // Initialize widget if not already done
-            await this.initializeTurnstileWidget();
-            
             // Wait for Turnstile to be ready
             if (typeof turnstile === 'undefined') {
                 throw new Error('Turnstile not loaded');
