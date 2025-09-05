@@ -129,13 +129,6 @@ class OrdiBird {
                 }
             }
             
-            // Testing shortcut: Press 'w' to trigger win screen
-            if (e.code === 'KeyW') {
-                e.preventDefault();
-                console.log('🎮 Testing shortcut: Triggering win screen');
-                this.score = 50; // Set winning score
-                this.gameWin();
-            }
         });
         
         this.canvas.addEventListener('click', () => {
@@ -601,8 +594,8 @@ class OrdiBird {
             }
         }
         
-        // Check for flag mode at 2 points (temporarily for testing)
-        if (this.score >= 2 && this.gameState === 'playing' && !this.flagMode) {
+        // Check for flag mode at 49 points
+        if (this.score >= 49 && this.gameState === 'playing' && !this.flagMode) {
             this.enterFlagMode();
         }
     }
