@@ -1023,15 +1023,24 @@ class OrdiBird {
         // Show loading state
         const claimButton = document.getElementById('claimTokenButton');
         const originalText = claimButton.textContent;
-        claimButton.textContent = 'Claiming Reward...';
+        claimButton.textContent = 'Verifying...';
         claimButton.disabled = true;
 
         try {
-            // Call backend API to claim token
+            // Step 1: Get and solve challenge (bot prevention)
+            console.log('🔐 Getting security challenge...');
+            const challengeData = await this.getAndSolveChallenge();
+            
+            // Step 2: Submit token claim with challenge solution
+            claimButton.textContent = 'Claiming Reward...';
+            console.log('🪙 Submitting token claim...');
+            
             const response = await fetch('/api/claim/token', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-Challenge-Token': challengeData.challengeToken,
+                    'X-Challenge-Solution': challengeData.solution
                 },
                 body: JSON.stringify({
                     sparkAddress: sparkAddress
@@ -1055,12 +1064,78 @@ class OrdiBird {
             }
         } catch (error) {
             console.error('Error claiming token:', error);
-            alert('❌ Network error. Please check your connection and try again.');
+            if (error.message.includes('Security verification failed')) {
+                alert('❌ Security verification failed. Please try again.');
+            } else {
+                alert('❌ Network error. Please check your connection and try again.');
+            }
         } finally {
             // Reset button state
             claimButton.textContent = originalText;
             claimButton.disabled = false;
         }
+    }
+
+    // Challenge system functions for bot prevention
+    async getAndSolveChallenge() {
+        try {
+            // Request challenge from server
+            const challengeResponse = await fetch('/api/get-challenge', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            
+            if (!challengeResponse.ok) {
+                throw new Error('Failed to get security challenge');
+            }
+            
+            const challenge = await challengeResponse.json();
+            console.log('🔐 Challenge received:', challenge.challengeId);
+            
+            // Solve the challenge using our algorithm
+            const solution = this.solveChallenge(challenge);
+            console.log('✅ Challenge solved');
+            
+            return {
+                challengeToken: challenge.challengeToken,
+                solution: solution
+            };
+            
+        } catch (error) {
+            console.error('Challenge failed:', error);
+            throw new Error('Security verification failed');
+        }
+    }
+
+    solveChallenge(challenge) {
+        const { data, timestamp, difficulty } = challenge;
+        
+        let result = data;
+        
+        // Apply transformations based on difficulty (must match server algorithm)
+        for (let i = 0; i < difficulty; i++) {
+            // Hash the result
+            result = btoa(result).replace(/[^a-zA-Z0-9]/g, '');
+            
+            // Add timestamp influence
+            const timeInfluence = (timestamp % 1000).toString();
+            result = result + timeInfluence;
+            
+            // Reverse every other iteration
+            if (i % 2 === 1) {
+                result = result.split('').reverse().join('');
+            }
+            
+            // Take substring
+            result = result.substring(0, 32);
+        }
+        
+        // Final transformation with domain-specific secret
+        // Use consistent secret that matches server
+        const domainSecret = 'ordibird-game-secret';
+        const finalResult = btoa(result + domainSecret).substring(0, 24);
+        
+        return finalResult;
     }
     
     showThanksForPlayingScreen() {

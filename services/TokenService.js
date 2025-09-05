@@ -166,54 +166,12 @@ class TokenService {
             console.error('❌ Error details:', error.message);
             console.error('❌ Error stack:', error.stack);
             
-            // Don't fall back to mock - report the actual error
+            // Report the actual error
             throw new Error(`Token claim failed: ${error.message}`);
         }
     }
 
 
-    async mockClaimToken(sparkAddress) {
-        try {
-            console.log(`🎯 Processing mock token claim for address: ${sparkAddress}`);
-            
-            const mintAmount = 1000000n; // 1 token with 6 decimals
-            
-            console.log(`🪙 Mock Step 1: Minting ${mintAmount} units to service wallet...`);
-            
-            // Simulate mint processing time
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // Generate mock mint transaction hash
-            const mockMintTxHash = 'mock_mint_tx_' + Math.random().toString(36).substr(2, 9);
-            console.log('✅ Mock Step 1 complete: Tokens minted to service wallet');
-            console.log('📝 Mock mint transaction hash:', mockMintTxHash);
-            
-            console.log(`🔄 Mock Step 2: Transferring ${mintAmount} units to user address: ${sparkAddress}`);
-            
-            // Simulate transfer processing time
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // Generate mock transfer transaction hash
-            const mockTransferTxHash = 'mock_transfer_tx_' + Math.random().toString(36).substr(2, 9);
-            console.log('✅ Mock Step 2 complete: Tokens transferred to user');
-            console.log('📝 Mock transfer transaction hash:', mockTransferTxHash);
-
-            return {
-                txHash: mockTransferTxHash, // Return the transfer transaction hash as primary
-                mintTxHash: mockMintTxHash, // Also include the mint transaction hash
-                amount: mintAmount.toString(),
-                tokenId: this.tokenId,
-                steps: {
-                    mint: mockMintTxHash,
-                    transfer: mockTransferTxHash
-                }
-            };
-
-        } catch (error) {
-            console.error('❌ Failed to mock claim token:', error);
-            throw error;
-        }
-    }
 
     async getTokenInfo() {
         try {

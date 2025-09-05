@@ -3,6 +3,8 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const Joi = require('joi');
+const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 require('dotenv').config();
 
 const { SparkWallet } = require('@buildonspark/spark-sdk');
@@ -46,6 +48,105 @@ const claimTokenSchema = Joi.object({
             'any.required': 'Spark address is required'
         })
 });
+
+// Challenge generation endpoint for bot prevention
+app.post('/api/get-challenge', (req, res) => {
+    try {
+        const challengeId = crypto.randomUUID();
+        const timestamp = Date.now();
+        const randomData = crypto.randomBytes(16).toString('hex');
+        
+        // Create challenge data
+        const challengeData = {
+            id: challengeId,
+            timestamp: timestamp,
+            data: randomData,
+            difficulty: 3
+        };
+        
+        // Create JWT token containing challenge data (expires in 5 minutes)
+        const challengeToken = jwt.sign(challengeData, process.env.JWT_SECRET, { 
+            expiresIn: '5m' 
+        });
+        
+        console.log(`🔐 Challenge generated: ${challengeId}`);
+        
+        res.json({
+            challengeId: challengeId,
+            challengeToken: challengeToken,
+            timestamp: timestamp,
+            data: randomData,
+            difficulty: challengeData.difficulty
+        });
+        
+    } catch (error) {
+        console.error('Challenge generation failed:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to generate challenge'
+        });
+    }
+});
+
+// Challenge validation function
+function validateChallenge(challengeToken, clientSolution) {
+    try {
+        // Verify and decode JWT token
+        const challengeData = jwt.verify(challengeToken, process.env.JWT_SECRET);
+        
+        // Calculate expected solution using the same algorithm as frontend
+        const expectedSolution = calculateExpectedSolution(challengeData);
+        
+        if (clientSolution !== expectedSolution) {
+            return { valid: false, reason: 'Invalid solution' };
+        }
+        
+        console.log(`✅ Challenge validated: ${challengeData.id}`);
+        return { valid: true };
+        
+    } catch (error) {
+        if (error.name === 'TokenExpiredError') {
+            return { valid: false, reason: 'Challenge expired' };
+        }
+        if (error.name === 'JsonWebTokenError') {
+            return { valid: false, reason: 'Invalid challenge token' };
+        }
+        console.error('Challenge validation error:', error);
+        return { valid: false, reason: 'Validation error' };
+    }
+}
+
+// Calculate expected solution (must match frontend algorithm)
+function calculateExpectedSolution(challengeData, clientDomain = null) {
+    const { data, timestamp, difficulty } = challengeData;
+    
+    let result = data;
+    
+    // Apply transformations based on difficulty
+    for (let i = 0; i < difficulty; i++) {
+        // Hash the result
+        result = Buffer.from(result).toString('base64').replace(/[^a-zA-Z0-9]/g, '');
+        
+        // Add timestamp influence
+        const timeInfluence = (timestamp % 1000).toString();
+        result = result + timeInfluence;
+        
+        // Reverse every other iteration
+        if (i % 2 === 1) {
+            result = result.split('').reverse().join('');
+        }
+        
+        // Take substring
+        result = result.substring(0, 32);
+    }
+    
+    // Final transformation with domain-specific secret
+    // Use a consistent domain secret that works for all environments
+    const domainSecret = 'ordibird-game-secret'; // Consistent across all domains
+    const finalResult = Buffer.from(result + domainSecret).toString('base64').substring(0, 24);
+    
+    return finalResult;
+}
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -144,13 +245,35 @@ app.get('/api/claim/status/:address', async (req, res) => {
     }
 });
 
-// Claim token endpoint (rate limiting disabled for testing)
+// Claim token endpoint with challenge validation
 app.post('/api/claim/token', async (req, res) => {
     try {
-        // Initialize services first
+        // Step 1: Validate challenge first
+        const challengeToken = req.headers['x-challenge-token'];
+        const challengeSolution = req.headers['x-challenge-solution'];
+        
+        if (!challengeToken || !challengeSolution) {
+            return res.status(400).json({
+                success: false,
+                error: 'Security verification required. Please try again.'
+            });
+        }
+        
+        const validation = validateChallenge(challengeToken, challengeSolution);
+        if (!validation.valid) {
+            console.log(`🚫 Challenge validation failed: ${validation.reason}`);
+            return res.status(400).json({
+                success: false,
+                error: 'Security verification failed. Please try again.'
+            });
+        }
+        
+        console.log('🔐 Challenge validation successful');
+        
+        // Step 2: Initialize services
         await initializeServices();
         
-        // Validate request body
+        // Step 3: Validate request body
         const { error, value } = claimTokenSchema.validate(req.body);
         if (error) {
             return res.status(400).json({
@@ -161,7 +284,7 @@ app.post('/api/claim/token', async (req, res) => {
 
         const { sparkAddress } = value;
 
-        // Rate limiting disabled for testing
+        // Step 4: Rate limiting (disabled for testing)
         // const hasClaimed = await rateLimitService.hasClaimedToday(sparkAddress);
         // if (hasClaimed) {
         //     return res.status(429).json({
@@ -171,10 +294,11 @@ app.post('/api/claim/token', async (req, res) => {
         //     });
         // }
 
-        // Process token claim
+        // Step 5: Process token claim
+        console.log(`🪙 Processing token claim for ${sparkAddress}`);
         const result = await tokenService.claimToken(sparkAddress);
 
-        // Record the claim
+        // Step 6: Record the claim
         await rateLimitService.recordClaim(sparkAddress);
 
         res.json({
@@ -183,7 +307,8 @@ app.post('/api/claim/token', async (req, res) => {
                 transactionHash: result.txHash,
                 sparkAddress,
                 tokenAmount: result.amount,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                challengeValidated: true
             }
         });
 
@@ -261,3 +386,12 @@ module.exports = async (req, res) => {
 
 // Also export the app for local development
 module.exports.app = app;
+
+// Start server for local development
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`🚀 OrdiBird server running on port ${PORT}`);
+        console.log(`🔐 Challenge system enabled`);
+        console.log(`🌐 Network: ${process.env.SPARK_NETWORK || 'mainnet'}`);
+    });
+}
