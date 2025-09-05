@@ -10,6 +10,7 @@ const { SparkWallet } = require('@buildonspark/spark-sdk');
 const TokenService = require('../services/TokenService');
 const RateLimitService = require('../services/RateLimitService');
 const TurnstileService = require('../services/TurnstileService');
+const BotBlockingService = require('../services/BotBlockingService');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -70,6 +71,55 @@ const limiter = rateLimit({
 const tokenService = new TokenService();
 const rateLimitService = new RateLimitService();
 const turnstileService = new TurnstileService();
+const botBlockingService = new BotBlockingService();
+
+// Bot blocking middleware
+const botBlockingMiddleware = (req, res, next) => {
+    // Extract client IP with proper priority order as per Cloudflare documentation
+    const clientIP = req.headers['cf-connecting-ip'] || 
+                     req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+                     req.headers['x-real-ip'] ||
+                     req.connection.remoteAddress ||
+                     req.socket.remoteAddress ||
+                     req.ip ||
+                     'unknown';
+
+    const userAgent = req.headers['user-agent'] || '';
+    const headers = req.headers;
+
+    // Check if request should be blocked
+    const blockCheck = botBlockingService.checkRequest(clientIP, userAgent, headers);
+    
+    if (blockCheck.blocked) {
+        console.log(`🚫 Request blocked from ${clientIP}: ${blockCheck.reason}`);
+        
+        return res.status(429).json({
+            success: false,
+            error: blockCheck.reason,
+            retryAfter: blockCheck.retryAfter,
+            ruleTriggered: blockCheck.ruleTriggered,
+            clientIP: clientIP.substring(0, 8) + '***' // Partially hide IP for privacy
+        });
+    }
+
+    // Add client info to request for logging
+    req.clientInfo = {
+        ip: clientIP,
+        userAgent: userAgent,
+        blocked: false
+    };
+
+    next();
+};
+
+// Apply bot blocking middleware to API routes (excluding admin security endpoints)
+app.use('/api', (req, res, next) => {
+    // Skip bot blocking for admin security endpoints
+    if (req.path.startsWith('/security/') && req.headers.authorization) {
+        return next();
+    }
+    return botBlockingMiddleware(req, res, next);
+});
 
 // Validation schemas
 const claimTokenSchema = Joi.object({
@@ -271,6 +321,103 @@ app.post('/api/blocklist/remove', async (req, res) => {
         res.status(500).json({
             success: false,
             error: 'Failed to remove address from blocklist'
+        });
+    }
+});
+
+// Bot blocking statistics endpoint (admin only)
+app.get('/api/security/stats', async (req, res) => {
+    try {
+        // Simple admin authentication check
+        const authHeader = req.headers.authorization;
+        if (!authHeader || authHeader !== `Bearer ${process.env.ADMIN_SECRET}`) {
+            return res.status(401).json({
+                success: false,
+                error: 'Unauthorized - Admin access required'
+            });
+        }
+
+        const stats = botBlockingService.getStats();
+        res.json({
+            success: true,
+            data: stats
+        });
+    } catch (error) {
+        console.error('Error getting bot blocking stats:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to get security statistics'
+        });
+    }
+});
+
+// Unblock IP endpoint (admin only)
+app.post('/api/security/unblock', async (req, res) => {
+    try {
+        // Simple admin authentication check
+        const authHeader = req.headers.authorization;
+        if (!authHeader || authHeader !== `Bearer ${process.env.ADMIN_SECRET}`) {
+            return res.status(401).json({
+                success: false,
+                error: 'Unauthorized - Admin access required'
+            });
+        }
+
+        const { ip } = req.body;
+        if (!ip) {
+            return res.status(400).json({
+                success: false,
+                error: 'IP address is required'
+            });
+        }
+
+        const unblocked = botBlockingService.unblockIP(ip);
+        
+        res.json({
+            success: true,
+            data: {
+                message: `IP ${ip} has been unblocked`,
+                unblocked: unblocked
+            }
+        });
+    } catch (error) {
+        console.error('Error unblocking IP:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to unblock IP address'
+        });
+    }
+});
+
+// Generate Vercel firewall config endpoint (admin only)
+app.get('/api/security/vercel-config', async (req, res) => {
+    try {
+        // Simple admin authentication check
+        const authHeader = req.headers.authorization;
+        if (!authHeader || authHeader !== `Bearer ${process.env.ADMIN_SECRET}`) {
+            return res.status(401).json({
+                success: false,
+                error: 'Unauthorized - Admin access required'
+            });
+        }
+
+        const config = botBlockingService.generateVercelFirewallConfig();
+        
+        res.json({
+            success: true,
+            data: {
+                config: config,
+                blockedIPs: botBlockingService.getBlockedIPsList(),
+                instructions: config ? 
+                    'Add the routes configuration to your vercel.json file to block these IPs at the edge.' :
+                    'No blocked IPs currently. Configuration will be generated when IPs are blocked.'
+            }
+        });
+    } catch (error) {
+        console.error('Error generating Vercel config:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to generate Vercel firewall configuration'
         });
     }
 });

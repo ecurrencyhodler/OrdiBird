@@ -13,5 +13,51 @@
     "api/server.js": {
       "maxDuration": 60
     }
-  }
+  },
+  "routes": [
+    {
+      "src": "/(.*)",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(?i).*(bot|crawler|spider|scraper|curl|wget|python-requests|node-fetch|axios|postman).*"
+        }
+      ],
+      "mitigate": {
+        "action": "challenge"
+      }
+    },
+    {
+      "src": "/(.*)",
+      "missing": [
+        {
+          "type": "header",
+          "key": "user-agent"
+        }
+      ],
+      "mitigate": {
+        "action": "deny"
+      }
+    },
+    {
+      "src": "/api/(.*)",
+      "has": [
+        {
+          "type": "header",
+          "key": "accept",
+          "value": "\\*/\\*"
+        }
+      ],
+      "missing": [
+        {
+          "type": "header",
+          "key": "accept-language"
+        }
+      ],
+      "mitigate": {
+        "action": "challenge"
+      }
+    }
+  ]
 }
