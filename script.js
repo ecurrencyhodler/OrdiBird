@@ -1107,8 +1107,8 @@ class OrdiBird {
                 grecaptcha.ready(resolve);
             });
 
-            // Execute reCAPTCHA and get token
-            const token = await grecaptcha.execute('6LdXlr4rAAAAABz9qqz9t7WCzeHwD1Hy5GlwQcwr', {
+            // Execute reCAPTCHA Enterprise and get token
+            const token = await grecaptcha.enterprise.execute('6LdXlr4rAAAAABz9qqz9t7WCzeHwD1Hy5GlwQcwr', {
                 action: 'claim_token'
             });
 
