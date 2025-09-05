@@ -1102,20 +1102,37 @@ class OrdiBird {
                 throw new Error('Turnstile not loaded');
             }
 
+            // Create a container for the Turnstile widget
+            const turnstileContainer = document.createElement('div');
+            turnstileContainer.id = 'turnstile-widget';
+            document.body.appendChild(turnstileContainer);
+
             // Execute Turnstile and get token
             const token = await new Promise((resolve, reject) => {
-                turnstile.render(document.body, {
+                const widgetId = turnstile.render('#turnstile-widget', {
                     sitekey: '0x4AAAAAABzQ5hA0KhMaQVm3', // Your actual Turnstile site key
                     callback: function(token) {
+                        console.log('Turnstile callback received with token:', token);
+                        // Clean up the widget
+                        if (turnstileContainer.parentNode) {
+                            turnstileContainer.parentNode.removeChild(turnstileContainer);
+                        }
                         resolve(token);
                     },
-                    'error-callback': function() {
-                        reject(new Error('Turnstile verification failed'));
+                    'error-callback': function(error) {
+                        console.error('Turnstile error callback:', error);
+                        // Clean up the widget
+                        if (turnstileContainer.parentNode) {
+                            turnstileContainer.parentNode.removeChild(turnstileContainer);
+                        }
+                        reject(new Error('Turnstile verification failed: ' + error));
                     }
                 });
+                
+                console.log('Turnstile widget rendered with ID:', widgetId);
             });
 
-            console.log('✅ Turnstile token obtained');
+            console.log('✅ Turnstile token obtained:', token);
             return token;
             
         } catch (error) {
