@@ -2,7 +2,11 @@ class RateLimitService {
     constructor() {
         // Use in-memory storage for serverless environment
         this.claims = new Map();
+        // Global rate limiting: track tokens minted per minute
+        this.globalMintTracker = new Map(); // key: minute timestamp, value: count
+        this.GLOBAL_TOKENS_PER_MINUTE = 20;
         console.log('📝 RateLimitService initialized with in-memory storage (serverless mode)');
+        console.log(`🚦 Global rate limit: ${this.GLOBAL_TOKENS_PER_MINUTE} tokens per minute`);
     }
 
     async loadClaims() {
@@ -123,6 +127,67 @@ class RateLimitService {
         }
         
         return count;
+    }
+
+    // Global rate limiting methods
+    getCurrentMinuteKey() {
+        const now = new Date();
+        // Create a key based on year, month, day, hour, and minute
+        return `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}`;
+    }
+
+    cleanupOldMintTracking() {
+        const now = new Date();
+        const currentTime = now.getTime();
+        
+        // Remove entries older than 2 minutes to keep memory usage low
+        for (const [key, data] of this.globalMintTracker.entries()) {
+            const keyTime = new Date(data.timestamp).getTime();
+            if (currentTime - keyTime > 2 * 60 * 1000) { // 2 minutes
+                this.globalMintTracker.delete(key);
+            }
+        }
+    }
+
+    isGlobalRateLimitExceeded() {
+        this.cleanupOldMintTracking();
+        const currentMinute = this.getCurrentMinuteKey();
+        const currentMinuteData = this.globalMintTracker.get(currentMinute);
+        
+        if (!currentMinuteData) {
+            return false;
+        }
+        
+        return currentMinuteData.count >= this.GLOBAL_TOKENS_PER_MINUTE;
+    }
+
+    recordGlobalMint() {
+        this.cleanupOldMintTracking();
+        const currentMinute = this.getCurrentMinuteKey();
+        const now = new Date();
+        
+        const currentData = this.globalMintTracker.get(currentMinute) || {
+            count: 0,
+            timestamp: now.toISOString()
+        };
+        
+        currentData.count += 1;
+        this.globalMintTracker.set(currentMinute, currentData);
+        
+        console.log(`🌍 Global mint recorded: ${currentData.count}/${this.GLOBAL_TOKENS_PER_MINUTE} for minute ${currentMinute}`);
+    }
+
+    getGlobalMintStats() {
+        this.cleanupOldMintTracking();
+        const currentMinute = this.getCurrentMinuteKey();
+        const currentMinuteData = this.globalMintTracker.get(currentMinute);
+        
+        return {
+            currentMinute,
+            tokensThisMinute: currentMinuteData ? currentMinuteData.count : 0,
+            maxTokensPerMinute: this.GLOBAL_TOKENS_PER_MINUTE,
+            isLimitExceeded: this.isGlobalRateLimitExceeded()
+        };
     }
 }
 

@@ -1059,8 +1059,13 @@ class OrdiBird {
                 // Show "Thanks for Playing!" screen after user clicks OK
                 this.showThanksForPlayingScreen();
             } else {
-                // Show error message
-                alert(`❌ Failed to claim reward: ${result.error}`);
+                // Handle specific error messages
+                if (result.error && result.error.includes('Only 20 tokens can be claimed every minute')) {
+                    alert(`⏰ ${result.error}`);
+                } else {
+                    // Show generic error message
+                    alert(`❌ Failed to claim reward: ${result.error}`);
+                }
             }
         } catch (error) {
             console.error('Error claiming token:', error);

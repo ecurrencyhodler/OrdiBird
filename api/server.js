@@ -401,7 +401,18 @@ app.post('/api/claim/token', async (req, res) => {
 
         const { sparkAddress } = value;
 
-        // Step 4: Rate limiting (disabled for testing)
+        // Step 4: Check global rate limit first
+        if (rateLimitService.isGlobalRateLimitExceeded()) {
+            const globalStats = rateLimitService.getGlobalMintStats();
+            console.log(`🚫 Global rate limit exceeded: ${globalStats.tokensThisMinute}/${globalStats.maxTokensPerMinute} tokens this minute`);
+            return res.status(429).json({
+                success: false,
+                error: 'Only 20 tokens can be claimed every minute. Please wait before trying to claim your token again.',
+                globalStats: globalStats
+            });
+        }
+
+        // Step 5: Rate limiting (disabled for testing)
         // const hasClaimed = await rateLimitService.hasClaimedToday(sparkAddress);
         // if (hasClaimed) {
         //     return res.status(429).json({
@@ -411,12 +422,13 @@ app.post('/api/claim/token', async (req, res) => {
         //     });
         // }
 
-        // Step 5: Process token claim
+        // Step 6: Process token claim
         console.log(`🪙 Processing token claim for ${sparkAddress}`);
         const result = await tokenService.claimToken(sparkAddress);
 
-        // Step 6: Record the claim
+        // Step 7: Record the claim and global mint
         await rateLimitService.recordClaim(sparkAddress);
+        rateLimitService.recordGlobalMint();
 
         res.json({
             success: true,
