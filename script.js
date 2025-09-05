@@ -1110,7 +1110,7 @@ class OrdiBird {
             // Execute Turnstile and get token
             const token = await new Promise((resolve, reject) => {
                 const widgetId = turnstile.render('#turnstile-widget', {
-                    sitekey: '0x4AAAAAABzQ5hA0KhMaQVm3', // Your actual Turnstile site key
+                    sitekey: '0x4AAAAAABzQ5hA0KhMaQVm3', // Turnstile site key from .env
                     callback: function(token) {
                         console.log('Turnstile callback received with token:', token);
                         // Clean up the widget
