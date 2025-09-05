@@ -129,6 +129,16 @@ class OrdiBird {
                 }
             }
             
+            // Trigger win screen when "w" key is pressed
+            if (e.code === 'KeyW' || e.key === 'w' || e.key === 'W') {
+                e.preventDefault();
+                if (this.gameState === 'playing') {
+                    // Set score to 50 to trigger proper win condition
+                    this.score = 50;
+                    this.updateScore();
+                    this.gameWin();
+                }
+            }
         });
         
         this.canvas.addEventListener('click', () => {
