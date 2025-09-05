@@ -1102,6 +1102,11 @@ class OrdiBird {
                 throw new Error('reCAPTCHA not loaded');
             }
 
+            // Wait for reCAPTCHA to be ready
+            await new Promise((resolve) => {
+                grecaptcha.ready(resolve);
+            });
+
             // Execute reCAPTCHA and get token
             const token = await grecaptcha.execute('6LdXlr4rAAAAABz9qqz9t7WCzeHwD1Hy5GlwQcwr', {
                 action: 'claim_token'

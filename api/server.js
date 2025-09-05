@@ -3,8 +3,6 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const Joi = require('joi');
-const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
 const path = require('path');
 require('dotenv').config();
 
@@ -90,104 +88,6 @@ const claimTokenSchema = Joi.object({
         })
 });
 
-// Challenge generation endpoint for bot prevention
-app.post('/api/get-challenge', (req, res) => {
-    try {
-        const challengeId = crypto.randomUUID();
-        const timestamp = Date.now();
-        const randomData = crypto.randomBytes(16).toString('hex');
-        
-        // Create challenge data
-        const challengeData = {
-            id: challengeId,
-            timestamp: timestamp,
-            data: randomData,
-            difficulty: 3
-        };
-        
-        // Create JWT token containing challenge data (expires in 5 minutes)
-        const challengeToken = jwt.sign(challengeData, process.env.JWT_SECRET, { 
-            expiresIn: '5m' 
-        });
-        
-        console.log(`🔐 Challenge generated: ${challengeId}`);
-        
-        res.json({
-            challengeId: challengeId,
-            challengeToken: challengeToken,
-            timestamp: timestamp,
-            data: randomData,
-            difficulty: challengeData.difficulty
-        });
-        
-    } catch (error) {
-        console.error('Challenge generation failed:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to generate challenge'
-        });
-    }
-});
-
-// Challenge validation function
-function validateChallenge(challengeToken, clientSolution) {
-    try {
-        // Verify and decode JWT token
-        const challengeData = jwt.verify(challengeToken, process.env.JWT_SECRET);
-        
-        // Calculate expected solution using the same algorithm as frontend
-        const expectedSolution = calculateExpectedSolution(challengeData);
-        
-        if (clientSolution !== expectedSolution) {
-            return { valid: false, reason: 'Invalid solution' };
-        }
-        
-        console.log(`✅ Challenge validated: ${challengeData.id}`);
-        return { valid: true };
-        
-    } catch (error) {
-        if (error.name === 'TokenExpiredError') {
-            return { valid: false, reason: 'Challenge expired' };
-        }
-        if (error.name === 'JsonWebTokenError') {
-            return { valid: false, reason: 'Invalid challenge token' };
-        }
-        console.error('Challenge validation error:', error);
-        return { valid: false, reason: 'Validation error' };
-    }
-}
-
-// Calculate expected solution (must match frontend algorithm)
-function calculateExpectedSolution(challengeData, clientDomain = null) {
-    const { data, timestamp, difficulty } = challengeData;
-    
-    let result = data;
-    
-    // Apply transformations based on difficulty
-    for (let i = 0; i < difficulty; i++) {
-        // Hash the result
-        result = Buffer.from(result).toString('base64').replace(/[^a-zA-Z0-9]/g, '');
-        
-        // Add timestamp influence
-        const timeInfluence = (timestamp % 1000).toString();
-        result = result + timeInfluence;
-        
-        // Reverse every other iteration
-        if (i % 2 === 1) {
-            result = result.split('').reverse().join('');
-        }
-        
-        // Take substring
-        result = result.substring(0, 32);
-    }
-    
-    // Final transformation with domain-specific secret
-    // Use a consistent domain secret that works for all environments
-    const domainSecret = 'ordibird-game-secret'; // Consistent across all domains
-    const finalResult = Buffer.from(result + domainSecret).toString('base64').substring(0, 24);
-    
-    return finalResult;
-}
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -557,7 +457,6 @@ async function initializeServices() {
 // For Vercel serverless functions, we need to export a handler function
 module.exports = async (req, res) => {
     // Only initialize services for endpoints that need them
-    // Challenge generation doesn't need TokenService initialization
     const needsInitialization = req.url && (
         req.url.includes('/api/claim/token') ||
         req.url.includes('/api/token/info') ||
@@ -588,7 +487,7 @@ module.exports.app = app;
 if (require.main === module) {
     app.listen(PORT, () => {
         console.log(`🚀 OrdiBird server running on port ${PORT}`);
-        console.log(`🔐 Challenge system enabled`);
+        console.log(`🔐 reCAPTCHA + Rate Limiting protection enabled`);
         console.log(`🌐 Network: ${process.env.SPARK_NETWORK || 'mainnet'}`);
     });
 }
