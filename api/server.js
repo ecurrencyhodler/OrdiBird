@@ -362,8 +362,19 @@ app.get('/api/claim/status/:address', async (req, res) => {
     }
 });
 
-// Claim token endpoint with challenge validation
+// Claim token endpoint with challenge validation - TEMPORARILY DISABLED
 app.post('/api/claim/token', async (req, res) => {
+    console.log('🚫 Token minting service temporarily disabled for maintenance');
+    
+    return res.status(503).json({
+        success: false,
+        error: 'Token minting service is temporarily disabled while we implement additional security features. Please check back soon!',
+        maintenance: true,
+        timestamp: new Date().toISOString()
+    });
+    
+    // ORIGINAL CODE COMMENTED OUT FOR MAINTENANCE
+    /*
     try {
         // Step 1: Validate challenge first
         const challengeToken = req.headers['x-challenge-token'];
@@ -378,7 +389,7 @@ app.post('/api/claim/token', async (req, res) => {
         
         const validation = validateChallenge(challengeToken, challengeSolution);
         if (!validation.valid) {
-            console.log(`� Challenge validation failed: ${validation.reason}`);
+            console.log(` Challenge validation failed: ${validation.reason}`);
             return res.status(400).json({
                 success: false,
                 error: 'Security verification failed. Please try again.'
@@ -468,6 +479,7 @@ app.post('/api/claim/token', async (req, res) => {
             details: error.stack ? error.stack.split('\n')[0] : 'No stack trace available'
         });
     }
+    */
 });
 
 // Error handling middleware

@@ -1060,7 +1060,9 @@ class OrdiBird {
                 this.showThanksForPlayingScreen();
             } else {
                 // Handle specific error messages
-                if (result.error && result.error.includes('Only 20 tokens can be claimed every minute')) {
+                if (result.maintenance) {
+                    alert(`🔧 ${result.error}`);
+                } else if (result.error && result.error.includes('Only 20 tokens can be claimed every minute')) {
                     alert(`⏰ ${result.error}`);
                 } else {
                     // Show generic error message
