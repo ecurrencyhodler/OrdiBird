@@ -45,45 +45,26 @@ class TokenService {
 
     async loadTokenInfo() {
         try {
-            // Load token info from the deployment file if it exists
-            if (fs.existsSync('bird-token-info.json')) {
-                const tokenData = JSON.parse(fs.readFileSync('bird-token-info.json', 'utf8'));
-                this.tokenInfo = tokenData;
-                console.log('✅ Token deployment info loaded');
-            } else {
-                console.log('⚠️ No token deployment info found');
-            }
+            // Skip JSON file loading and go straight to environment variables
+            console.log('📋 Loading token info from environment variables...');
             
-            // Get the token identifier from wallet balance (use bech32 format key for transfers)
-            try {
-                const balance = await this.issuerWallet.getBalance();
-                if (balance && balance.tokenBalances) {
-                    for (const [tokenId, tokenBalance] of balance.tokenBalances) {
-                        this.tokenId = tokenId; // Use bech32 format key
-                        console.log('✅ Token ID loaded from wallet (bech32):', this.tokenId);
-                        if (tokenBalance.tokenMetadata && tokenBalance.tokenMetadata.rawTokenIdentifier) {
-                            console.log('✅ Raw Token ID (hex):', tokenBalance.tokenMetadata.rawTokenIdentifier.toString('hex'));
-                        }
-                        return;
-                    }
-                }
-                
-                // Fallback to environment variable if available
-                this.tokenId = process.env.TOKEN_ID;
-                if (this.tokenId) {
-                    console.log('✅ Token ID loaded from environment (fallback):', this.tokenId);
-                } else {
-                    console.log('⚠️ TOKEN_ID not found in environment variables or wallet');
-                }
-            } catch (balanceError) {
-                console.log('⚠️ Could not get wallet balance, using env TOKEN_ID');
-                this.tokenId = process.env.TOKEN_ID;
-                if (this.tokenId) {
-                    console.log('✅ Token ID loaded from environment:', this.tokenId);
-                } else {
-                    console.log('⚠️ TOKEN_ID not found in environment variables');
-                }
+            // Use TOKEN_ID from environment variables directly
+            this.tokenId = process.env.TOKEN_ID;
+            if (this.tokenId) {
+                console.log('✅ Token ID loaded from environment:', this.tokenId);
+            } else {
+                console.log('⚠️ TOKEN_ID not found in environment variables');
+                throw new Error('TOKEN_ID environment variable is required');
             }
+
+            // Set basic token info from environment variables
+            this.tokenInfo = {
+                deployed: true,
+                deploymentTime: new Date().toISOString(),
+                tokenId: this.tokenId
+            };
+            
+            console.log('✅ Token deployment info loaded from environment');
         } catch (error) {
             console.error('❌ Failed to load token info:', error);
             throw error;
