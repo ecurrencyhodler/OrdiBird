@@ -2,6 +2,11 @@
 
 A fun web-based game where players can earn BIRD tokens on the Bitcoin Spark network.
 
+
+https://github.com/user-attachments/assets/3cc37341-faeb-4b84-a3e1-f05407045638
+
+
+
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -39,17 +44,12 @@ A fun web-based game where players can earn BIRD tokens on the Bitcoin Spark net
    PORT=3001
    NODE_ENV=production
    
-   # Rate limiting
-   RATE_LIMIT_WINDOW_MS=86400000
-   RATE_LIMIT_MAX_REQUESTS=1
-   
    # Token configuration
    TOKEN_NAME=OrdiBird
    TOKEN_TICKER=BIRD
    TOKEN_DECIMALS=6
    TOKEN_MAX_SUPPLY=0n
    TOKEN_IS_FREEZABLE=true
-   TOKEN_METADATA_URL=https://github.com/user-attachments/assets/adb6ee5f-5c04-4fed-b338-53fa04e49ac2
    ```
 
 4. **Start the server**
@@ -64,7 +64,7 @@ A fun web-based game where players can earn BIRD tokens on the Bitcoin Spark net
 ## 🎮 How to Play
 
 1. **Play the Game**: Hit SPACE to flap
-2. **Claim Tokens**: When you reach the end, enter your Spark address to claim a BIRD token
+2. **Claim Tokens**: When you reach the end, enter your Spark address to claim a BIRD token (This has been deactivated)
 
 ## 🔧 Development
 
